@@ -72,3 +72,10 @@ export const PRICING_PLANS: PricingPlan[] = [
 
 export const PRO_ANNUAL_PRICE = '$390 / year';
 export const PRO_MONTHLY_PRICE = '$39 / month';
+
+export type BillingInterval = 'annual' | 'monthly';
+
+export const STRIPE_PRICE_IDS: Record<BillingInterval, string | undefined> = {
+  annual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+  monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+};

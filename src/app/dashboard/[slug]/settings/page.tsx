@@ -4,6 +4,7 @@ import { getDashboardProperty } from '@/lib/dashboard-property';
 import { PropertyHomesSection } from '@/components/dashboard/property-homes-section';
 import { SettingsForm } from '@/components/dashboard/settings-form';
 import { SubscriptionCard } from '@/components/dashboard/subscription-card';
+import { getAccountUsage } from '@/lib/billing';
 
 export default async function SettingsPage({
   params,
@@ -21,6 +22,10 @@ export default async function SettingsPage({
     .from('property_managers')
     .select('id, user:users(email, name)')
     .eq('property_id', property.id);
+
+  const usage = isPropertyOwner
+    ? await getAccountUsage(property.owner_id)
+    : null;
 
   const managers = (managersRaw ?? []).map((m) => {
     const u = Array.isArray(m.user) ? m.user[0] : m.user;
@@ -45,10 +50,14 @@ export default async function SettingsPage({
         userId={user.id}
       />
 
-      {isPropertyOwner && (
+      {isPropertyOwner && usage && (
         <div className="max-w-xl">
-          {/* Plan is hardcoded to free until Stripe billing is wired up. */}
-          <SubscriptionCard currentPlan="free" />
+          <SubscriptionCard
+            currentPlan={usage.plan}
+            hostedStaysUsed={usage.used}
+            hostedStaysLimit={usage.limit}
+            returnPath={`/dashboard/${slug}/settings`}
+          />
         </div>
       )}
 

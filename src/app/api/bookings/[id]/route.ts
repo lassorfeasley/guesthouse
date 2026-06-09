@@ -8,6 +8,13 @@ import {
   notifyBookingDeclined,
   notifyBookingCancelled,
 } from '@/lib/email/notifications';
+import {
+  assertCanHostStay,
+  getPropertyOwnerId,
+  incrementHostedStays,
+  StayLimitReachedError,
+  toLimitReachedPayload,
+} from '@/lib/billing';
 import type { Room } from '@/types/database';
 
 export async function PATCH(
@@ -39,7 +46,19 @@ export async function PATCH(
 
     if (action === 'approve') {
       if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+      const ownerId = await getPropertyOwnerId(booking.property_id);
+      try {
+        await assertCanHostStay(ownerId);
+      } catch (err) {
+        if (err instanceof StayLimitReachedError) {
+          return NextResponse.json(toLimitReachedPayload(err), { status: 402 });
+        }
+        throw err;
+      }
+
       await admin.from('bookings').update({ status: 'approved' }).eq('id', id);
+      await incrementHostedStays(ownerId);
       notifyBookingApproved(id).catch(console.error);
     } else if (action === 'decline') {
       if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

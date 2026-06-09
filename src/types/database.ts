@@ -1,4 +1,5 @@
 export type UserRole = 'owner' | 'guest' | 'admin';
+export type PlanId = 'free' | 'pro';
 export type InvitationType = 'standing' | 'date_offer' | 'prix_fixe';
 export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
 export type BookingStatus = 'requested' | 'approved' | 'declined' | 'cancelled';
@@ -11,6 +12,10 @@ export interface User {
   /** Generated full name (first_name + last_name). Read-only. */
   name: string | null;
   role: UserRole;
+  plan: PlanId;
+  hosted_stays_used: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   visible_to_coguests: boolean;
   notification_prefs: NotificationPrefs;
   created_at: string;

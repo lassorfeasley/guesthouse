@@ -22,6 +22,8 @@ import {
 } from '@/components/dashboard/host-stay-sidebar';
 import { InviteGuestDialog } from '@/components/dashboard/invite-guest-dialog';
 import { Button } from '@/components/ui/button';
+import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
+import { isLimitReachedResponse } from '@/lib/billing-client';
 
 type ComposeVariant = 'page' | 'embedded' | 'split';
 
@@ -85,6 +87,11 @@ function HostComposeForm({
   const [notes, setNotes] = useState('');
   const [notifyGuest, setNotifyGuest] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [limitPayload, setLimitPayload] = useState<{
+    used: number;
+    limit: number;
+  } | null>(null);
 
   const datesEditable = true;
 
@@ -225,6 +232,11 @@ function HostComposeForm({
 
     const data = await res.json();
     if (!res.ok) {
+      if (isLimitReachedResponse(res.status, data)) {
+        setLimitPayload({ used: data.used, limit: data.limit });
+        setUpgradeOpen(true);
+        return;
+      }
       toast.error(
         typeof data.error === 'string' ? data.error : 'Failed to add stay'
       );
@@ -346,43 +358,62 @@ function HostComposeForm({
     </div>
   );
 
+  const upgradeDialog = (
+    <UpgradeDialog
+      open={upgradeOpen}
+      onOpenChange={setUpgradeOpen}
+      used={limitPayload?.used}
+      limit={limitPayload?.limit}
+      returnPath={`/dashboard/${slug}/compose`}
+    />
+  );
+
   if (variant === 'split') {
     return (
-      <HostComposePartsContext.Provider
-        value={{ sidebar, calendarBlock }}
-      >
-        {children}
-      </HostComposePartsContext.Provider>
+      <>
+        <HostComposePartsContext.Provider
+          value={{ sidebar, calendarBlock }}
+        >
+          {children}
+        </HostComposePartsContext.Provider>
+        {upgradeDialog}
+      </>
     );
   }
 
   if (variant === 'embedded') {
     return (
-      <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[1fr_360px]">
-        <div className="order-2 min-w-0 lg:order-1">{calendarColumn}</div>
-        <aside className="order-1 lg:sticky lg:top-8 lg:order-2 lg:self-start">
-          {sidebar}
-        </aside>
-      </div>
+      <>
+        <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[1fr_360px]">
+          <div className="order-2 min-w-0 lg:order-1">{calendarColumn}</div>
+          <aside className="order-1 lg:sticky lg:top-8 lg:order-2 lg:self-start">
+            {sidebar}
+          </aside>
+        </div>
+        {upgradeDialog}
+      </>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Book a guest stay
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Pick dates on the calendar, then finish the details in the survey.
-        </p>
-      </div>
+    <>
+      <div className="mx-auto w-full max-w-6xl">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Book a guest stay
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Pick dates on the calendar, then finish the details in the survey.
+          </p>
+        </div>
 
-      <div className="mt-8 grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
-        {calendarColumn}
-        <aside className="lg:sticky lg:top-8 lg:self-start">{sidebar}</aside>
+        <div className="mt-8 grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
+          {calendarColumn}
+          <aside className="lg:sticky lg:top-8 lg:self-start">{sidebar}</aside>
+        </div>
       </div>
-    </div>
+      {upgradeDialog}
+    </>
   );
 }
 

@@ -4,6 +4,13 @@ import { getCurrentUser, canManageProperty } from '@/lib/auth';
 import { hostBookingSchema } from '@/lib/validations';
 import { checkRoomConflicts } from '@/lib/bookings';
 import { notifyBookingApproved } from '@/lib/email/notifications';
+import {
+  assertCanHostStay,
+  getPropertyOwnerId,
+  incrementHostedStays,
+  StayLimitReachedError,
+  toLimitReachedPayload,
+} from '@/lib/billing';
 import type { Room } from '@/types/database';
 
 export async function POST(request: NextRequest) {
@@ -33,6 +40,17 @@ export async function POST(request: NextRequest) {
         { error: 'Check-out must be after check-in' },
         { status: 400 }
       );
+    }
+
+    const ownerId = await getPropertyOwnerId(data.property_id);
+
+    try {
+      await assertCanHostStay(ownerId);
+    } catch (err) {
+      if (err instanceof StayLimitReachedError) {
+        return NextResponse.json(toLimitReachedPayload(err), { status: 402 });
+      }
+      throw err;
     }
 
     const admin = createAdminClient();
@@ -110,6 +128,8 @@ export async function POST(request: NextRequest) {
     if (bookingError || !booking) {
       return NextResponse.json({ error: bookingError?.message }, { status: 500 });
     }
+
+    await incrementHostedStays(ownerId);
 
     await admin.from('booking_dates').insert({
       booking_id: booking.id,

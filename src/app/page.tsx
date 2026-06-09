@@ -65,8 +65,8 @@ export default async function HomePage({
               Simple, honest pricing
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Set everything up for free — your first 2 hosted stays are on us.
-              Upgrade only when you&apos;re ready to keep hosting.
+              Set everything up and host your first two stays free. Keep going
+              when you&apos;re ready.
             </p>
           </div>
           <PricingCards className="mt-12" />

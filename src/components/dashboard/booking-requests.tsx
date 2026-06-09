@@ -17,6 +17,8 @@ import { formatDateRange } from '@/lib/dates';
 import { Badge } from '@/components/ui/badge';
 import { AddToCalendarButton } from '@/components/add-to-calendar-button';
 import { CancelHostStayButton } from '@/components/dashboard/cancel-host-stay-button';
+import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
+import { isLimitReachedResponse } from '@/lib/billing-client';
 
 interface RequestBooking {
   id: string;
@@ -56,6 +58,11 @@ export function BookingRequests({
   const [loading, setLoading] = useState<string | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineMessage, setDeclineMessage] = useState('');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [limitPayload, setLimitPayload] = useState<{
+    used: number;
+    limit: number;
+  } | null>(null);
 
   async function handleAction(
     bookingId: string,
@@ -68,10 +75,16 @@ export function BookingRequests({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, decline_message: message }),
     });
+    const data = await res.json().catch(() => ({}));
     setLoading(null);
     setDeclineId(null);
 
     if (!res.ok) {
+      if (action === 'approve' && isLimitReachedResponse(res.status, data)) {
+        setLimitPayload({ used: data.used, limit: data.limit });
+        setUpgradeOpen(true);
+        return;
+      }
       toast.error('Action failed');
       return;
     }
@@ -220,6 +233,14 @@ export function BookingRequests({
           </div>
         </section>
       )}
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        used={limitPayload?.used}
+        limit={limitPayload?.limit}
+        returnPath={`/dashboard/${slug}/requests`}
+      />
 
       <Dialog open={!!declineId} onOpenChange={() => setDeclineId(null)}>
         <DialogContent>

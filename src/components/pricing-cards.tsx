@@ -1,96 +1,48 @@
 import Link from 'next/link';
-import { ArrowDown, Building2, Check, Home, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { PRICING_PLANS, type PlanIcon } from '@/lib/pricing';
-
-const PLAN_ICONS: Record<PlanIcon, typeof Home> = {
-  home: Home,
-  building: Building2,
-  sparkles: Sparkles,
-};
 
 export function PricingCards({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        'mx-auto grid max-w-4xl gap-6 text-left sm:grid-cols-2',
-        className
-      )}
-    >
-      {PRICING_PLANS.map((plan) => {
-        const Icon = PLAN_ICONS[plan.icon];
-        return (
-          <div
-            key={plan.id}
-            className={cn(
-              'relative flex flex-col rounded-2xl border bg-card p-8 shadow-sm',
-              plan.recommended && 'border-primary ring-1 ring-primary'
-            )}
-          >
-            {plan.recommended && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                Recommended
-              </span>
-            )}
-
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Icon className="size-5" />
-              <span className="text-lg font-semibold text-foreground">
-                {plan.name}
-              </span>
-            </div>
-
-            <div className="mt-4 flex items-baseline gap-1.5">
-              <span className="text-4xl font-semibold tracking-tight">
-                {plan.price}
-              </span>
-              {plan.priceSuffix && (
-                <span className="text-sm text-muted-foreground">
-                  {plan.priceSuffix}
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {plan.subtext ?? plan.tagline}
+    <div className={cn('mx-auto max-w-3xl', className)}>
+      <div className="rounded-3xl border bg-card p-8 shadow-sm sm:p-10">
+        <div className="flex flex-col items-center gap-8 text-center lg:flex-row lg:items-stretch lg:gap-10 lg:text-left">
+          <div className="flex-1 lg:flex lg:flex-col lg:justify-center">
+            <h3 className="text-2xl font-semibold tracking-tight">
+              Your first two stays are on us
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No card to begin. Set everything up and feel it work.
             </p>
-
-            <ul className="mt-6 space-y-3 border-t pt-6">
-              {plan.features.map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm">
-                  <Check className="size-4 shrink-0 text-green-600" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-              {plan.note && (
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ArrowDown className="size-4 shrink-0" />
-                  <span>{plan.note}</span>
-                </li>
-              )}
-            </ul>
-
-            <div className="mt-8 flex flex-col gap-2">
-              <Button
-                asChild
-                variant="outline"
-                className={cn(
-                  'w-full',
-                  plan.recommended &&
-                    'border-primary text-primary hover:text-primary'
-                )}
-              >
-                <Link href={plan.cta.href}>{plan.cta.label}</Link>
-              </Button>
-              {plan.ctaNote && (
-                <p className="text-center text-xs text-muted-foreground">
-                  {plan.ctaNote}
-                </p>
-              )}
-            </div>
           </div>
-        );
-      })}
+
+          <div className="flex w-full items-center gap-3 lg:w-auto lg:flex-col">
+            <span className="h-px flex-1 bg-border lg:h-auto lg:w-px" />
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              then
+            </span>
+            <span className="h-px flex-1 bg-border lg:h-auto lg:w-px" />
+          </div>
+
+          <div className="flex-1 lg:flex lg:flex-col lg:justify-center">
+            <div className="flex items-baseline justify-center gap-1.5 lg:justify-start">
+              <span className="text-5xl font-semibold tracking-tight">$39</span>
+              <span className="text-base text-muted-foreground">/ month</span>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">or $390 a year</p>
+
+            <Button asChild size="lg" className="mt-5 w-full">
+              <Link href="/signup">Get started free</Link>
+            </Button>
+
+            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground lg:justify-start">
+              <Check className="size-4 shrink-0 text-green-600" />
+              Unlimited stays &amp; homes · Guests always free
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

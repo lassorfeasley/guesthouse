@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateRange } from '@/lib/dates';
@@ -21,6 +21,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { CalendarPlus } from 'lucide-react';
+import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
+import { isLimitReachedResponse } from '@/lib/billing-client';
 
 interface HostBookingDialogProps {
   propertyId: string;
@@ -45,14 +47,22 @@ const STEP_TITLES: Record<StepKey, string> = {
 
 function ManualStaySurvey({
   propertyId,
+  returnPath,
   onClose,
 }: {
   propertyId: string;
+  returnPath?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [limitPayload, setLimitPayload] = useState<{
+    used: number;
+    limit: number;
+  } | null>(null);
   const [guestFirstName, setGuestFirstName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -155,6 +165,11 @@ function ManualStaySurvey({
 
     const data = await res.json();
     if (!res.ok) {
+      if (isLimitReachedResponse(res.status, data)) {
+        setLimitPayload({ used: data.used, limit: data.limit });
+        setUpgradeOpen(true);
+        return;
+      }
       toast.error(
         typeof data.error === 'string' ? data.error : 'Failed to add stay'
       );
@@ -167,6 +182,7 @@ function ManualStaySurvey({
   }
 
   return (
+    <>
     <SurveyDialogLayout
       title="Add a manual stay"
       stepIndex={current}
@@ -391,6 +407,14 @@ function ManualStaySurvey({
         </dl>
       )}
     </SurveyDialogLayout>
+    <UpgradeDialog
+      open={upgradeOpen}
+      onOpenChange={setUpgradeOpen}
+      used={limitPayload?.used}
+      limit={limitPayload?.limit}
+      returnPath={returnPath ?? pathname}
+    />
+    </>
   );
 }
 
@@ -400,7 +424,8 @@ export function HostBookingDialog({
   roomAvailability,
   useParentBookingContext = false,
   trigger,
-}: HostBookingDialogProps) {
+  returnPath,
+}: HostBookingDialogProps & { returnPath?: string }) {
   const [open, setOpen] = useState(false);
 
   const bookableRooms = rooms.map((r) => ({
@@ -412,6 +437,7 @@ export function HostBookingDialog({
   const survey = (
     <ManualStaySurvey
       propertyId={propertyId}
+      returnPath={returnPath}
       onClose={() => setOpen(false)}
     />
   );

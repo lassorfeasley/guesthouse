@@ -7,6 +7,8 @@ import { Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { EditBookingSurvey } from '@/components/dashboard/edit-booking-survey';
+import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
+import { isLimitReachedResponse } from '@/lib/billing-client';
 import type { BookingWithDetails } from '@/types/database';
 
 function formatBox(date: string): string {
@@ -21,6 +23,11 @@ export function HostManageStayCard({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [limitPayload, setLimitPayload] = useState<{
+    used: number;
+    limit: number;
+  } | null>(null);
 
   const { check_in: checkIn, check_out: checkOut } = booking.dates;
   const roomsLabel = booking.rooms.map((r) => r.name).join(', ') || '—';
@@ -36,6 +43,14 @@ export function HostManageStayCard({
     setLoading(false);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (
+        body.action === 'approve' &&
+        isLimitReachedResponse(res.status, data)
+      ) {
+        setLimitPayload({ used: data.used, limit: data.limit });
+        setUpgradeOpen(true);
+        return;
+      }
       toast.error(
         typeof data.error === 'string' ? data.error : 'Something went wrong'
       );
@@ -124,6 +139,14 @@ export function HostManageStayCard({
           booking={booking}
         />
       )}
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        used={limitPayload?.used}
+        limit={limitPayload?.limit}
+        returnPath={`/dashboard/${booking.property.slug}/bookings/${booking.id}`}
+      />
     </div>
   );
 }
