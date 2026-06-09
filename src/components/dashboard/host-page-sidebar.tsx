@@ -92,7 +92,7 @@ export function HostPageSidebar({
           <p className="text-xl font-semibold">
             {nights > 0
               ? `${nights} ${nights === 1 ? 'night' : 'nights'}`
-              : 'Add your dates'}
+              : 'Invite a guest'}
           </p>
           {nights > 0 && checkIn && checkOut && (
             <p className="text-sm text-muted-foreground">

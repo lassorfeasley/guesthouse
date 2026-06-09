@@ -53,6 +53,27 @@ export default async function RoomProfilePage({
 
   const blocksForEditor = (blocks ?? []).map((b) => ({ ...b, room }));
 
+  const roomActions = (
+    <div className="flex items-center gap-2">
+      <RoomEditDialog
+        room={room}
+        images={roomImages ?? []}
+        fields={['name', 'max_occupancy', 'image']}
+        title="Edit room details"
+        trigger={
+          <Button variant="outline" size="icon" aria-label="Edit">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        }
+      />
+      <InviteGuestDialog
+        propertyId={property.id}
+        rooms={rooms ?? []}
+        preselectedRoomIds={[room.id]}
+      />
+    </div>
+  );
+
   const navSections = [
     ...(roomImages && roomImages.length > 0
       ? [{ id: 'photos', label: 'Photos' }]
@@ -66,44 +87,27 @@ export default async function RoomProfilePage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        href={`/dashboard/${slug}/overview`}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to home
-      </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          href={`/dashboard/${slug}/overview`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
+        {roomActions}
+      </div>
 
       {room.image_url ? (
         <>
           {/* Title */}
-          <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                {room.name}
-              </h1>
-              <p className="mt-1 text-muted-foreground">
-                Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <RoomEditDialog
-                room={room}
-                images={roomImages ?? []}
-                fields={['name', 'max_occupancy', 'image']}
-                title="Edit room details"
-                trigger={
-                  <Button variant="outline" size="icon" aria-label="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                }
-              />
-              <InviteGuestDialog
-                propertyId={property.id}
-                rooms={rooms ?? []}
-                preselectedRoomIds={[room.id]}
-              />
-            </div>
+          <div className="mt-3">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              {room.name}
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
+            </p>
           </div>
 
           {/* Hero */}
@@ -122,24 +126,6 @@ export default async function RoomProfilePage({
       ) : (
         /* Hero with overlaid info (no photo yet) */
         <>
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <RoomEditDialog
-              room={room}
-              images={roomImages ?? []}
-              fields={['name', 'max_occupancy', 'image']}
-              title="Edit room details"
-              trigger={
-                <Button variant="outline" size="icon" aria-label="Edit">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              }
-            />
-            <InviteGuestDialog
-              propertyId={property.id}
-              rooms={rooms ?? []}
-              preselectedRoomIds={[room.id]}
-            />
-          </div>
           <div className="relative mt-4 flex h-72 w-full flex-col justify-end overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 p-6 sm:h-[420px]">
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               {room.name}

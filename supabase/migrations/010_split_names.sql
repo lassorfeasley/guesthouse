@@ -28,7 +28,7 @@ WHERE name IS NOT NULL;
 
 ALTER TABLE public.users DROP COLUMN name;
 ALTER TABLE public.users
-  ADD COLUMN name TEXT GENERATED ALWAYS AS (
+  ADD COLUMN name TEXT GENERATED ALWAYS AS (x
     NULLIF(btrim(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')), '')
   ) STORED;
 

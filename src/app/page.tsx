@@ -5,6 +5,7 @@ import { isSiteAdmin } from '@/lib/site-admin';
 import { isLandingPreviewEnabled } from '@/lib/dev-tools';
 import { redirect } from 'next/navigation';
 import { SiteFooter } from '@/components/site-footer';
+import { HowItWorksCarousel } from '@/components/how-it-works-carousel';
 import { PricingCards } from '@/components/pricing-cards';
 
 export default async function HomePage({
@@ -57,6 +58,21 @@ export default async function HomePage({
           </Button>
         </div>
       </main>
+
+      <section id="how-it-works" className="border-t py-24">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-semibold tracking-tight">
+              How it works
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Three steps to go from empty calendar to guests at the door —
+              built for hosts, not listings.
+            </p>
+          </div>
+          <HowItWorksCarousel className="mt-12" />
+        </div>
+      </section>
 
       <section id="pricing" className="border-t bg-muted/30 py-24">
         <div className="container mx-auto px-4">

@@ -124,8 +124,7 @@
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
-    /* Rausch — Airbnb's signature coral */
-    --primary: 358 79% 59%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96.5%;
     --secondary-foreground: 0 0% 13%;
@@ -141,8 +140,8 @@
     --warning-foreground: 38 92% 14%;
     --border: 0 0% 89%;
     --input: 0 0% 89%;
-    --ring: 358 79% 59%;
-    --chart-1: 358 79% 59%;
+    --ring: 221 83% 53%;
+    --chart-1: 221 83% 53%;
     --chart-2: 188 64% 42%;
     --chart-3: 43 89% 56%;
     --chart-4: 262 52% 60%;
@@ -150,12 +149,12 @@
     --radius: 0.75rem;
     --sidebar: 0 0% 99%;
     --sidebar-foreground: 0 0% 13%;
-    --sidebar-primary: 358 79% 59%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96.5%;
     --sidebar-accent-foreground: 0 0% 13%;
     --sidebar-border: 0 0% 89%;
-    --sidebar-ring: 358 79% 59%;
+    --sidebar-ring: 221 83% 53%;
   }
   .dark {
     --background: 0 0% 9%;
@@ -164,7 +163,7 @@
     --card-foreground: 0 0% 96%;
     --popover: 0 0% 11.5%;
     --popover-foreground: 0 0% 96%;
-    --primary: 358 84% 64%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 96%;
@@ -180,20 +179,20 @@
     --warning-foreground: 38 92% 12%;
     --border: 0 0% 20%;
     --input: 0 0% 22%;
-    --ring: 358 84% 64%;
-    --chart-1: 358 84% 64%;
+    --ring: 217 91% 60%;
+    --chart-1: 217 91% 60%;
     --chart-2: 188 64% 52%;
     --chart-3: 43 89% 60%;
     --chart-4: 262 60% 68%;
     --chart-5: 152 56% 52%;
     --sidebar: 0 0% 11.5%;
     --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 358 84% 64%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 18%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 358 84% 64%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 

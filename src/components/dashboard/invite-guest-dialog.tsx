@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import {
+  AvailabilityCalendar,
+  type CalendarSelection,
+  type DateField,
+} from '@/components/dashboard/availability-calendar';
 import {
   Form,
   FormControl,
@@ -34,7 +38,7 @@ import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { SurveyDialogLayout } from '@/components/dashboard/survey-dialog-layout';
 import { ManualStaySurvey } from '@/components/dashboard/host-booking-dialog';
-import { BookingProvider } from '@/components/guest/booking-context';
+import { BookingProvider, useOptionalBooking } from '@/components/guest/booking-context';
 import { toast } from 'sonner';
 import { UserPlus } from 'lucide-react';
 import type { RoomAvailability } from '@/lib/guest-calendar';
@@ -99,13 +103,19 @@ export function InviteGuestDialog({
   trigger,
 }: InviteGuestDialogProps) {
   const router = useRouter();
+  const parentBooking = useOptionalBooking();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'invite' | 'manual'>('invite');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
-  const [windows, setWindows] = useState<{ start_date: string; end_date: string }[]>([
-    { start_date: '', end_date: '' },
-  ]);
+  const [windows, setWindows] = useState<{ start_date: string; end_date: string }[]>(
+    []
+  );
+  const [dateSelection, setDateSelection] = useState<CalendarSelection>({
+    checkIn: null,
+    checkOut: null,
+  });
+  const [dateField, setDateField] = useState<DateField | null>(null);
 
   const defaultRoomIds = (preselectedRoomIds ?? []).filter((id) =>
     rooms.some((r) => r.id === id)
@@ -155,15 +165,56 @@ export function InviteGuestDialog({
       room_ids:
         defaultRoomIds.length > 0 ? defaultRoomIds : rooms.map((r) => r.id),
     });
-    setWindows([{ start_date: '', end_date: '' }]);
+    setWindows([]);
+    setDateSelection({ checkIn: null, checkOut: null });
+    setDateField(null);
     setStep(0);
     setMode('invite');
   }
 
+  function collectWindows() {
+    if (invType === 'prix_fixe') {
+      return dateSelection.checkIn && dateSelection.checkOut
+        ? [{ start_date: dateSelection.checkIn, end_date: dateSelection.checkOut }]
+        : [];
+    }
+    const added = windows.filter((w) => w.start_date && w.end_date);
+    if (dateSelection.checkIn && dateSelection.checkOut) {
+      added.push({
+        start_date: dateSelection.checkIn,
+        end_date: dateSelection.checkOut,
+      });
+    }
+    return added;
+  }
+
+  function addWindow() {
+    if (!dateSelection.checkIn || !dateSelection.checkOut) return;
+    setWindows((prev) => [
+      ...prev.filter((w) => w.start_date && w.end_date),
+      { start_date: dateSelection.checkIn!, end_date: dateSelection.checkOut! },
+    ]);
+    setDateSelection({ checkIn: null, checkOut: null });
+    setDateField('checkIn');
+  }
+
+  function removeWindow(index: number) {
+    setWindows((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function handleOpenChange(next: boolean) {
     setOpen(next);
-    if (next) resetForm();
-    else setMode('invite');
+    if (next) {
+      resetForm();
+      // Carry over any dates the host already picked in the page sidebar.
+      const pre = useParentBookingContext ? parentBooking : null;
+      if (pre?.checkIn && pre?.checkOut) {
+        setDateSelection({ checkIn: pre.checkIn, checkOut: pre.checkOut });
+        form.setValue('type', 'prix_fixe');
+      }
+    } else {
+      setMode('invite');
+    }
   }
 
   const bookableRooms = rooms.map((r) => ({
@@ -198,9 +249,12 @@ export function InviteGuestDialog({
       return form.trigger('guest_email');
     }
     if (stepKey === 'dates') {
-      const validWindows = windows.filter((w) => w.start_date && w.end_date);
-      if (validWindows.length === 0) {
-        toast.error('Add at least one date window');
+      if (collectWindows().length === 0) {
+        toast.error(
+          invType === 'prix_fixe'
+            ? 'Select the stay dates'
+            : 'Add at least one date range'
+        );
         return false;
       }
       return true;
@@ -222,7 +276,7 @@ export function InviteGuestDialog({
   }
 
   async function onSubmit(formValues: InvitationInput) {
-    const validWindows = windows.filter((w) => w.start_date && w.end_date);
+    const validWindows = collectWindows();
 
     if (formValues.type !== 'standing' && validWindows.length === 0) {
       toast.error('Add at least one date window');
@@ -269,7 +323,7 @@ export function InviteGuestDialog({
     .map((r) => r.name)
     .join(', ');
 
-  const validWindows = windows.filter((w) => w.start_date && w.end_date);
+  const validWindows = collectWindows();
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -401,54 +455,72 @@ export function InviteGuestDialog({
           )}
 
           {stepKey === 'dates' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <p className="text-sm text-muted-foreground">
                 {invType === 'prix_fixe'
-                  ? 'Offer the exact dates of the stay.'
-                  : 'Offer one or more date ranges they can book within.'}
+                  ? 'Select the exact dates of the stay.'
+                  : 'Select one or more date ranges they can book within.'}
               </p>
-              {windows.map((w, i) => (
-                <div key={i} className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Start</Label>
-                    <Input
-                      type="date"
-                      className="mt-1"
-                      value={w.start_date}
-                      onChange={(e) => {
-                        const next = [...windows];
-                        next[i] = { ...next[i], start_date: e.target.value };
-                        setWindows(next);
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">End</Label>
-                    <Input
-                      type="date"
-                      className="mt-1"
-                      value={w.end_date}
-                      onChange={(e) => {
-                        const next = [...windows];
-                        next[i] = { ...next[i], end_date: e.target.value };
-                        setWindows(next);
-                      }}
-                    />
-                  </div>
+
+              <AvailabilityCalendar
+                bookings={[]}
+                monthsToShow={2}
+                selectable
+                value={dateSelection}
+                onChange={setDateSelection}
+                activeField={dateField}
+                onActiveFieldChange={setDateField}
+              />
+
+              {dateSelection.checkIn && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border p-4 text-sm">
+                  <span className="font-medium">
+                    {dateSelection.checkOut
+                      ? formatDateRange(
+                          dateSelection.checkIn,
+                          dateSelection.checkOut
+                        )
+                      : `${formatDate(dateSelection.checkIn)} — pick a checkout date`}
+                  </span>
+                  {invType === 'date_offer' &&
+                    dateSelection.checkIn &&
+                    dateSelection.checkOut && (
+                      <Button type="button" size="sm" onClick={addWindow}>
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add window
+                      </Button>
+                    )}
                 </div>
-              ))}
-              {invType === 'date_offer' && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setWindows([...windows, { start_date: '', end_date: '' }])
-                  }
-                >
-                  Add window
-                </Button>
               )}
+
+              {invType === 'date_offer' &&
+                windows.filter((w) => w.start_date && w.end_date).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Offered windows
+                    </p>
+                    {windows
+                      .filter((w) => w.start_date && w.end_date)
+                      .map((w, i) => (
+                        <div
+                          key={`${w.start_date}-${w.end_date}-${i}`}
+                          className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm"
+                        >
+                          <span className="font-medium">
+                            {formatDateRange(w.start_date, w.end_date)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeWindow(i)}
+                            className="text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label="Remove window"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
             </div>
           )}
 

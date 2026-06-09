@@ -241,3 +241,8 @@ export function useBooking(): BookingContextValue {
   }
   return ctx;
 }
+
+/** Like {@link useBooking} but returns null outside a provider instead of throwing. */
+export function useOptionalBooking(): BookingContextValue | null {
+  return useContext(BookingContext);
+}
