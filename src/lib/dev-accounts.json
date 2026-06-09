@@ -1,0 +1,32 @@
+{
+  "password": "devpassword123",
+  "property": {
+    "id": "d0d0d0d0-0000-4000-8000-000000000001",
+    "slug": "seaside-cottage",
+    "name": "Seaside Cottage"
+  },
+  "inviteToken": "d0d0d0d0-0000-4000-8000-0000000000aa",
+  "accounts": [
+    {
+      "role": "owner",
+      "email": "owner@dev.local",
+      "firstName": "Olivia",
+      "lastName": "Owner",
+      "label": "Owner"
+    },
+    {
+      "role": "admin",
+      "email": "admin@dev.local",
+      "firstName": "Adam",
+      "lastName": "Admin",
+      "label": "Admin"
+    },
+    {
+      "role": "guest",
+      "email": "guest@dev.local",
+      "firstName": "Gabby",
+      "lastName": "Guest",
+      "label": "Guest"
+    }
+  ]
+}

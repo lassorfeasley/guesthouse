@@ -27,12 +27,16 @@ export function HouseCalendar({
     setActiveField,
     combinedBookings,
     combinedBlocks,
+    rooms,
+    roomAvailability,
   } = useBooking();
 
   return (
     <AvailabilityCalendar
       bookings={combinedBookings}
       blocks={combinedBlocks}
+      rooms={rooms.map((r) => ({ id: r.id, name: r.name }))}
+      roomAvailability={roomAvailability}
       monthsToShow={monthsToShow}
       selectable={!disabled}
       value={{ checkIn, checkOut }}

@@ -45,6 +45,8 @@ interface BookingContextValue extends BookingSelection {
   lockRoomSelection: boolean;
   combinedBookings: CalendarBooking[];
   combinedBlocks: CalendarBlock[];
+  /** Per-room availability for the full in-scope room set (house-level views). */
+  roomAvailability: Record<string, RoomAvailability>;
   maxGuests: number;
 }
 
@@ -207,6 +209,7 @@ export function BookingProvider({
       lockRoomSelection,
       combinedBookings,
       combinedBlocks,
+      roomAvailability,
       maxGuests,
     }),
     [
@@ -221,6 +224,7 @@ export function BookingProvider({
       lockRoomSelection,
       combinedBookings,
       combinedBlocks,
+      roomAvailability,
       maxGuests,
     ]
   );

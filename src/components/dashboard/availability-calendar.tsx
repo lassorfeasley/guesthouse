@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { datesOverlap } from '@/lib/dates';
 
 interface CalendarBooking {
   id: string;
@@ -31,6 +32,25 @@ interface CalendarBlock {
   id: string;
   start_date: string;
   end_date: string;
+}
+
+interface RoomAvailability {
+  bookings: CalendarBooking[];
+  blocks: CalendarBlock[];
+}
+
+interface CalendarRoom {
+  id: string;
+  name: string;
+}
+
+/** One room that is taken on a given day (booking or owner block). */
+interface TakenRoom {
+  roomName: string;
+  guestName?: string;
+  pending?: boolean;
+  blocked?: boolean;
+  bookingId?: string;
 }
 
 interface DateRange {
@@ -60,6 +80,13 @@ interface AvailabilityCalendarProps {
   onActiveFieldChange?: (field: DateField | null) => void;
   /** If set, booked days link to `${bookingHrefBase}/${bookingId}`. */
   bookingHrefBase?: string;
+  /**
+   * Full in-scope room set. When provided alongside `roomAvailability`, the
+   * calendar treats availability per-room: a day is only fully blocked when
+   * every room is taken; days with some rooms free stay selectable.
+   */
+  rooms?: CalendarRoom[];
+  roomAvailability?: Record<string, RoomAvailability>;
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -70,7 +97,7 @@ function DayTooltip({
   label,
   children,
 }: {
-  label?: string;
+  label?: React.ReactNode;
   children: React.ReactNode;
 }) {
   if (!label) return <>{children}</>;
@@ -79,7 +106,7 @@ function DayTooltip({
       {children}
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 max-w-[12rem] -translate-x-1/2 scale-95 rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium leading-tight text-background opacity-0 shadow-md transition-all duration-150 group-hover/day:scale-100 group-hover/day:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 max-w-[14rem] -translate-x-1/2 scale-95 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-center text-xs font-medium leading-tight text-background opacity-0 shadow-md transition-all duration-150 group-hover/day:scale-100 group-hover/day:opacity-100"
       >
         {label}
         <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-4 border-transparent border-t-foreground" />
@@ -99,10 +126,65 @@ function coversDay(day: Date, start: string, end: string): boolean {
   }
 }
 
+/** Which rooms are taken on a given day, across the full room set. */
+function takenRoomsForDay(
+  day: Date,
+  rooms: CalendarRoom[],
+  roomAvailability: Record<string, RoomAvailability>
+): TakenRoom[] {
+  const taken: TakenRoom[] = [];
+  for (const room of rooms) {
+    const avail = roomAvailability[room.id];
+    if (!avail) continue;
+    const booking = avail.bookings.find((b) =>
+      coversDay(day, b.checkIn, b.checkOut)
+    );
+    if (booking) {
+      taken.push({
+        roomName: room.name,
+        guestName: booking.guestName,
+        pending: booking.pending,
+        bookingId: booking.id,
+      });
+      continue;
+    }
+    const block = avail.blocks.find((bl) =>
+      coversDay(day, bl.start_date, bl.end_date)
+    );
+    if (block) {
+      taken.push({ roomName: room.name, blocked: true });
+    }
+  }
+  return taken;
+}
+
+/** Tooltip line for a taken room: prefer "Guest · Room", else "Room". */
+function takenRoomLabel(t: TakenRoom): string {
+  const base =
+    t.blocked || !t.guestName || t.guestName === 'Booked'
+      ? t.roomName
+      : `${t.guestName} · ${t.roomName}`;
+  if (t.blocked) return `${base} · Blocked`;
+  return t.pending ? `${base} (pending)` : base;
+}
+
+function TakenRoomsTooltip({ taken }: { taken: TakenRoom[] }) {
+  return (
+    <span className="flex flex-col gap-0.5">
+      {taken.map((t, i) => (
+        <span key={i}>{takenRoomLabel(t)}</span>
+      ))}
+    </span>
+  );
+}
+
 function MonthGrid({
   month,
   bookings,
   blocks,
+  rooms,
+  roomAvailability,
+  roomMode,
   selectable,
   value,
   isSelectable,
@@ -112,6 +194,9 @@ function MonthGrid({
   month: Date;
   bookings: CalendarBooking[];
   blocks: CalendarBlock[];
+  rooms?: CalendarRoom[];
+  roomAvailability?: Record<string, RoomAvailability>;
+  roomMode: boolean;
   selectable: boolean;
   value?: CalendarSelection;
   isSelectable: (dateStr: string) => boolean;
@@ -146,23 +231,47 @@ function MonthGrid({
           <div key={`pad-${i}`} className="aspect-square" />
         ))}
         {days.map((day) => {
+          // Per-room availability when the full room set is supplied; otherwise
+          // fall back to the flat booking/block lists.
+          const taken: TakenRoom[] =
+            roomMode && rooms && roomAvailability
+              ? takenRoomsForDay(day, rooms, roomAvailability)
+              : [];
           const booked = bookings.filter((b) =>
             coversDay(day, b.checkIn, b.checkOut)
           );
-          const hasPending = booked.some((b) => b.pending);
-          const hasConfirmed = booked.some((b) => !b.pending);
           const isBlocked = blocks.some((bl) =>
             coversDay(day, bl.start_date, bl.end_date)
           );
           const isPast = isBefore(day, today);
-          const unavailable = booked.length > 0 || isBlocked;
           const isToday = isSameDay(day, today);
+
+          const totalRooms = rooms?.length ?? 0;
+          const fullyBooked = roomMode
+            ? taken.length >= totalRooms && totalRooms > 0
+            : booked.length > 0 || isBlocked;
+          const partial = roomMode && taken.length > 0 && !fullyBooked;
+
+          const hasPending = roomMode
+            ? taken.some((t) => t.pending)
+            : booked.some((b) => b.pending);
+          const hasConfirmed = booked.some((b) => !b.pending);
+          const unavailable = fullyBooked;
+
+          const representativeBookingId = roomMode
+            ? taken.find((t) => t.bookingId)?.bookingId
+            : booked[0]?.id;
           const bookingHref =
-            bookingHrefBase && booked.length > 0
-              ? `${bookingHrefBase}/${booked[0].id}`
+            bookingHrefBase && representativeBookingId
+              ? `${bookingHrefBase}/${representativeBookingId}`
               : undefined;
-          const title =
-            booked.length > 0
+
+          // Tooltip: list of taken rooms (room mode) or guest names (legacy).
+          const tooltip: React.ReactNode = roomMode
+            ? taken.length > 0
+              ? <TakenRoomsTooltip taken={taken} />
+              : undefined
+            : booked.length > 0
               ? booked
                   .map((b) =>
                     b.pending ? `${b.guestName} (pending)` : b.guestName
@@ -171,6 +280,7 @@ function MonthGrid({
               : isBlocked
                 ? 'Blocked'
                 : undefined;
+          const title = tooltip;
 
           if (selectable) {
             const dateStr = format(day, 'yyyy-MM-dd');
@@ -184,36 +294,66 @@ function MonthGrid({
               dateStr > value.checkIn &&
               dateStr < value.checkOut;
 
+            const anyTaken = roomMode
+              ? taken.length > 0
+              : booked.length > 0 || isBlocked;
+
+            const partialDot = partial ? (
+              <span
+                className="pointer-events-none absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-red-500"
+                aria-hidden
+              />
+            ) : null;
+
             return (
               <div
                 key={day.toISOString()}
                 className="flex aspect-square items-center justify-center p-1.5"
               >
-                {selDay ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelect(dateStr)}
-                    className={cn(
-                      INNER,
-                      endpoint && 'bg-foreground font-medium text-background',
-                      !endpoint && inRange && 'bg-muted text-foreground',
-                      !endpoint &&
-                        !inRange &&
-                        'text-foreground hover:bg-muted',
-                      !endpoint &&
-                        isToday &&
-                        'ring-1 ring-inset ring-foreground'
-                    )}
-                  >
-                    {format(day, 'd')}
-                  </button>
+                {isPast ? (
+                  // Past days aren't actionable — render like an empty day, but
+                  // keep a faded dot (and hover) to show a stay was there.
+                  <DayTooltip label={anyTaken ? title : undefined}>
+                    <span className={cn(INNER, 'relative text-muted-foreground/40')}>
+                      {format(day, 'd')}
+                      {anyTaken && (
+                        <span
+                          className="pointer-events-none absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-red-500/40"
+                          aria-hidden
+                        />
+                      )}
+                    </span>
+                  </DayTooltip>
+                ) : selDay ? (
+                  <DayTooltip label={partial ? title : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(dateStr)}
+                      className={cn(
+                        INNER,
+                        'relative',
+                        endpoint &&
+                          'bg-blue-600 font-semibold text-white shadow-sm dark:bg-blue-500',
+                        !endpoint && inRange && 'bg-blue-500/15 text-foreground',
+                        !endpoint &&
+                          !inRange &&
+                          'text-foreground hover:bg-blue-500/10',
+                        !endpoint &&
+                          isToday &&
+                          'ring-1 ring-inset ring-foreground'
+                      )}
+                    >
+                      {format(day, 'd')}
+                      {partialDot}
+                    </button>
+                  </DayTooltip>
                 ) : bookingHref ? (
                   <DayTooltip label={title}>
                     <Link
                       href={bookingHref}
                       className={cn(
                         INNER,
-                        'bg-muted font-medium text-muted-foreground ring-1 ring-inset ring-border transition hover:ring-2 hover:ring-foreground/40'
+                        'bg-red-500/10 font-medium text-red-600 line-through decoration-red-400/60 ring-1 ring-inset ring-red-500/30 transition hover:ring-2 hover:ring-red-500/50 dark:text-red-400'
                       )}
                     >
                       {format(day, 'd')}
@@ -225,7 +365,7 @@ function MonthGrid({
                       className={cn(
                         INNER,
                         unavailable
-                          ? 'bg-muted font-medium text-muted-foreground ring-1 ring-inset ring-border'
+                          ? 'bg-red-500/10 font-medium text-red-600 line-through decoration-red-400/60 ring-1 ring-inset ring-red-500/30 dark:text-red-400'
                           : 'text-muted-foreground/40'
                       )}
                     >
@@ -295,15 +435,44 @@ export function AvailabilityCalendar({
   activeField = null,
   onActiveFieldChange,
   bookingHrefBase,
+  rooms,
+  roomAvailability,
 }: AvailabilityCalendarProps) {
   const [base, setBase] = useState(() => startOfMonth(new Date()));
   const today = startOfDay(new Date());
+
+  // Per-room mode: availability is computed across the full room set, so a day
+  // is only un-selectable when *every* room is taken. Falls back to the flat
+  // bookings/blocks lists for display-only calendars.
+  const roomMode = !!(rooms && rooms.length > 0 && roomAvailability);
 
   const months = Array.from({ length: monthsToShow }, (_, i) =>
     addMonths(base, i)
   );
 
-  function dayUnavailable(day: Date): boolean {
+  /** A single room is free for the whole stay [start, end) (nights only). */
+  function roomFreeForRange(roomId: string, start: string, end: string): boolean {
+    const avail = roomAvailability?.[roomId];
+    if (!avail) return true;
+    const blockedByBooking = avail.bookings.some((b) =>
+      datesOverlap(start, end, b.checkIn, b.checkOut)
+    );
+    if (blockedByBooking) return false;
+    return !avail.blocks.some((bl) =>
+      datesOverlap(start, end, bl.start_date, bl.end_date)
+    );
+  }
+
+  /** At least one room is free for the entire range. */
+  function rangeHasFreeRoom(start: string, end: string): boolean {
+    if (!roomMode) return true;
+    return rooms!.some((r) => roomFreeForRange(r.id, start, end));
+  }
+
+  function dayFullyBooked(day: Date): boolean {
+    if (roomMode) {
+      return takenRoomsForDay(day, rooms!, roomAvailability!).length >= rooms!.length;
+    }
     const booked = bookings.some((b) => coversDay(day, b.checkIn, b.checkOut));
     const blocked = blocks.some((bl) =>
       coversDay(day, bl.start_date, bl.end_date)
@@ -315,7 +484,7 @@ export function AvailabilityCalendar({
     if (!selectable) return false;
     const day = parseISO(dateStr);
     if (isBefore(day, today)) return false;
-    if (dayUnavailable(day)) return false;
+    if (dayFullyBooked(day)) return false;
     if (
       allowedRanges.length > 0 &&
       !allowedRanges.some((r) => dateStr >= r.start && dateStr <= r.end)
@@ -325,12 +494,27 @@ export function AvailabilityCalendar({
     return true;
   }
 
-  function hasBlockingBetween(start: string, end: string): boolean {
-    const interior = eachDayOfInterval({
-      start: addDays(parseISO(start), 1),
+  /** True when no room can span the whole range, or interior days are blocked. */
+  function rangeBlocked(start: string, end: string): boolean {
+    // Endpoints + interior must fall inside any allowed window / not be past.
+    const span = eachDayOfInterval({
+      start: parseISO(start),
       end: addDays(parseISO(end), -1),
     });
-    return interior.some((d) => !isSelectable(format(d, 'yyyy-MM-dd')));
+    const day = startOfDay(new Date());
+    for (const d of span) {
+      const ds = format(d, 'yyyy-MM-dd');
+      if (isBefore(d, day)) return true;
+      if (
+        allowedRanges.length > 0 &&
+        !allowedRanges.some((r) => ds >= r.start && ds <= r.end)
+      ) {
+        return true;
+      }
+    }
+    if (roomMode) return !rangeHasFreeRoom(start, end);
+    // Legacy: every interior night must individually be free.
+    return span.slice(1).some((d) => dayFullyBooked(d));
   }
 
   function handleSelect(dateStr: string) {
@@ -344,8 +528,8 @@ export function AvailabilityCalendar({
       activeField ?? (!checkIn || (checkIn && checkOut) ? 'checkIn' : 'checkOut');
 
     if (field === 'checkOut') {
-      // A valid checkout must be after check-in with nothing blocking between.
-      if (checkIn && dateStr > checkIn && !hasBlockingBetween(checkIn, dateStr)) {
+      // A valid checkout must be after check-in with a room free across the span.
+      if (checkIn && dateStr > checkIn && !rangeBlocked(checkIn, dateStr)) {
         onChange({ checkIn, checkOut: dateStr });
         onActiveFieldChange?.(null);
         return;
@@ -357,7 +541,7 @@ export function AvailabilityCalendar({
     }
 
     // field === 'checkIn' — keep an existing checkout only if still valid.
-    if (checkOut && dateStr < checkOut && !hasBlockingBetween(dateStr, checkOut)) {
+    if (checkOut && dateStr < checkOut && !rangeBlocked(dateStr, checkOut)) {
       onChange({ checkIn: dateStr, checkOut });
       onActiveFieldChange?.(null);
       return;
@@ -397,6 +581,9 @@ export function AvailabilityCalendar({
               month={m}
               bookings={bookings}
               blocks={blocks}
+              rooms={rooms}
+              roomAvailability={roomAvailability}
+              roomMode={roomMode}
               selectable={selectable}
               value={value}
               isSelectable={isSelectable}

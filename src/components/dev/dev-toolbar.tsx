@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import devAccounts from '@/lib/dev-accounts.json';
 import {
   type GuestPreviewAs,
   type GuestPreviewBookingStatus,
@@ -86,6 +89,69 @@ function SegmentTabs<T extends string>({
   );
 }
 
+const ROLE_DESTINATIONS: Record<string, string> = {
+  owner: '/dashboard',
+  admin: '/admin',
+  guest: '/my-trips',
+};
+
+function DevAuthControls() {
+  const router = useRouter();
+  const [pending, setPending] = useState<string | null>(null);
+
+  async function signInAs(email: string, role: string) {
+    setPending(role);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: devAccounts.password,
+    });
+    setPending(null);
+    if (error) {
+      toast.error(
+        `Sign in failed: ${error.message}. Have you run "npm run db:seed:dev"?`
+      );
+      return;
+    }
+    router.push(ROLE_DESTINATIONS[role] ?? '/');
+    router.refresh();
+  }
+
+  async function signOut() {
+    setPending('out');
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setPending(null);
+    router.push('/?preview=1');
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-700/80 pt-2">
+      <span className="text-xs text-zinc-400">Sign in as:</span>
+      {devAccounts.accounts.map((acct) => (
+        <button
+          key={acct.role}
+          type="button"
+          disabled={pending !== null}
+          onClick={() => signInAs(acct.email, acct.role)}
+          className="rounded-md bg-black/20 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:text-white disabled:opacity-50"
+        >
+          {pending === acct.role ? '…' : acct.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        disabled={pending !== null}
+        onClick={signOut}
+        className="ml-auto rounded-md px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
+      >
+        {pending === 'out' ? 'Signing out…' : 'Sign out'}
+      </button>
+    </div>
+  );
+}
+
 export function DevToolbar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -134,13 +200,29 @@ export function DevToolbar() {
               (admin preview — sign in required)
             </span>
           </p>
-          <SegmentTabs
-            items={APP_VIEWS}
-            value={currentView ?? 'guest'}
-            getHref={(id) => viewHrefs[id]}
-            ariaLabel="Application view"
-          />
+          <div className="flex items-center gap-2">
+            <SegmentTabs
+              items={APP_VIEWS}
+              value={currentView ?? 'guest'}
+              getHref={(id) => viewHrefs[id]}
+              ariaLabel="Application view"
+            />
+            <Link
+              href="/styleguide"
+              aria-current={pathname === '/styleguide' ? 'page' : undefined}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                pathname === '/styleguide'
+                  ? 'bg-white text-zinc-900 shadow-sm'
+                  : 'bg-black/20 text-white/80 hover:text-white'
+              )}
+            >
+              Design
+            </Link>
+          </div>
         </div>
+
+        <DevAuthControls />
 
         {showGuestSubControls && (
           <div className="flex flex-wrap items-center gap-2 border-t border-zinc-700/80 pt-2">

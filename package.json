@@ -6,7 +6,8 @@
     "dev": "NODE_OPTIONS=--max-http-header-size=65536 next dev",
     "build": "next build",
     "start": "NODE_OPTIONS=--max-http-header-size=65536 next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed:dev": "node --env-file=.env.local scripts/seed-dev.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
