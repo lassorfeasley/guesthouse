@@ -28,6 +28,8 @@ export interface NotificationPrefs {
   invitation_expiring: boolean;
   // Guest stay reminders (opt-out)
   guest_reminders: boolean;
+  // Host onboarding/engagement nudges, e.g. "finish your home profile" (opt-out)
+  host_tips: boolean;
   // Product updates — marketing (opt-out, scoped to people who own a home)
   product_updates: boolean;
 }

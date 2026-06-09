@@ -10,6 +10,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   booking_cancelled: true,
   invitation_expiring: true,
   guest_reminders: true,
+  host_tips: true,
   product_updates: true,
 };
 
@@ -35,6 +36,7 @@ export function wantsEmail(
 export type UnsubscribeCategory =
   | 'guest_reminders'
   | 'host_activity'
+  | 'host_tips'
   | 'product_updates';
 
 export const CATEGORY_FLAGS: Record<
@@ -43,14 +45,59 @@ export const CATEGORY_FLAGS: Record<
 > = {
   guest_reminders: ['guest_reminders'],
   host_activity: ['booking_requests', 'booking_cancelled', 'invitation_expiring'],
+  host_tips: ['host_tips'],
   product_updates: ['product_updates'],
 };
 
-export const CATEGORY_LABELS: Record<UnsubscribeCategory, string> = {
-  guest_reminders: 'Stay reminders',
-  host_activity: 'Host activity notifications',
-  product_updates: 'Product updates',
+export interface CategoryMeta {
+  label: string;
+  description: string;
+  /** Which kind of recipient this applies to, for grouping in the UI. */
+  audience: 'guest' | 'host';
+}
+
+export const CATEGORY_META: Record<UnsubscribeCategory, CategoryMeta> = {
+  guest_reminders: {
+    label: 'Stay reminders',
+    description:
+      "Trip reminders, checkout details, and post-stay notes for stays you're a guest on.",
+    audience: 'guest',
+  },
+  host_activity: {
+    label: 'Host activity notifications',
+    description:
+      'Booking requests, cancellations, and expiring invitations for homes you host.',
+    audience: 'host',
+  },
+  host_tips: {
+    label: 'Tips & nudges',
+    description:
+      'Occasional suggestions to help you get the most out of hosting, like finishing your home profile.',
+    audience: 'host',
+  },
+  product_updates: {
+    label: 'Product updates',
+    description: 'Occasional news about new GuestHouse features. Marketing only.',
+    audience: 'host',
+  },
 };
+
+/** Display label for a category. */
+export const CATEGORY_LABELS: Record<UnsubscribeCategory, string> =
+  Object.fromEntries(
+    (Object.keys(CATEGORY_META) as UnsubscribeCategory[]).map((key) => [
+      key,
+      CATEGORY_META[key].label,
+    ])
+  ) as Record<UnsubscribeCategory, string>;
+
+/** Stable display order for preference centers. */
+export const ALL_UNSUBSCRIBE_CATEGORIES: UnsubscribeCategory[] = [
+  'guest_reminders',
+  'host_activity',
+  'host_tips',
+  'product_updates',
+];
 
 export function isUnsubscribeCategory(
   value: string

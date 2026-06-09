@@ -127,6 +127,18 @@ export function SettingsForm({
               </PrefGroup>
 
               <PrefGroup
+                title="Tips & nudges"
+                description="Occasional suggestions to help you get the most out of hosting, like finishing your home profile."
+              >
+                <PrefToggle
+                  prefs={prefs}
+                  setPrefs={setPrefs}
+                  prefKey="host_tips"
+                  label="Hosting tips & suggestions"
+                />
+              </PrefGroup>
+
+              <PrefGroup
                 title="Product updates"
                 description="Occasional news about new GuestHouse features. Marketing only — opt out anytime."
               >

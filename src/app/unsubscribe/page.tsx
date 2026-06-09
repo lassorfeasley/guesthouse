@@ -1,11 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { parseUnsubscribeToken } from '@/lib/unsubscribe';
+import { makeUnsubscribeToken, parseUnsubscribeToken } from '@/lib/unsubscribe';
 import {
-  CATEGORY_LABELS,
+  ALL_UNSUBSCRIBE_CATEGORIES,
+  CATEGORY_META,
   isSubscribedToCategory,
   normalizePrefs,
 } from '@/lib/notification-prefs';
-import { UnsubscribeControl } from '@/components/unsubscribe-control';
+import {
+  UnsubscribePreferences,
+  type PreferenceRow,
+} from '@/components/unsubscribe-preferences';
 
 export const metadata = { title: 'Email preferences · GuestHouse' };
 
@@ -17,7 +21,7 @@ export default async function UnsubscribePage({
   const { token } = await searchParams;
   const parsed = token ? parseUnsubscribeToken(token) : null;
 
-  let initialSubscribed = true;
+  let rows: PreferenceRow[] = [];
   if (parsed) {
     const admin = createAdminClient();
     const { data: user } = await admin
@@ -25,11 +29,17 @@ export default async function UnsubscribePage({
       .select('notification_prefs')
       .eq('id', parsed.userId)
       .maybeSingle();
+
     if (user) {
-      initialSubscribed = isSubscribedToCategory(
-        normalizePrefs(user.notification_prefs),
-        parsed.category
-      );
+      const prefs = normalizePrefs(user.notification_prefs);
+      rows = ALL_UNSUBSCRIBE_CATEGORIES.map((category) => ({
+        category,
+        token: makeUnsubscribeToken(parsed.userId, category),
+        label: CATEGORY_META[category].label,
+        description: CATEGORY_META[category].description,
+        subscribed: isSubscribedToCategory(prefs, category),
+        highlighted: category === parsed.category,
+      }));
     }
   }
 
@@ -44,16 +54,12 @@ export default async function UnsubscribePage({
         </h1>
 
         <div className="mt-6">
-          {parsed ? (
-            <UnsubscribeControl
-              token={token!}
-              categoryLabel={CATEGORY_LABELS[parsed.category]}
-              initialSubscribed={initialSubscribed}
-            />
+          {parsed && rows.length > 0 ? (
+            <UnsubscribePreferences rows={rows} />
           ) : (
             <p className="text-muted-foreground">
-              This unsubscribe link is invalid or has expired. You can manage all
-              your email preferences from your account settings.
+              This link is invalid or has expired. You can manage all your email
+              preferences from your account settings.
             </p>
           )}
         </div>
