@@ -43,7 +43,7 @@ export function generateIcs(booking: BookingWithDetails): string {
     busyStatus: 'BUSY',
     organizer: {
       name: 'Gracious',
-      email: 'noreply@gracious.host',
+      email: 'hello@gracious.host',
     },
   });
 
