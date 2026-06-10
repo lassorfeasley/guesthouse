@@ -14,6 +14,8 @@ import {
 import { invitationRequiresApproval } from '@/lib/invitation-booking';
 import {
   notifyBookingApproved,
+  notifyRequestReceived,
+  notifyStayBooked,
   notifyStayRequested,
 } from '@/lib/email/notifications';
 import { upsertUserProfile } from '@/lib/auth';
@@ -138,8 +140,10 @@ export async function POST(request: NextRequest) {
 
     if (needsApproval) {
       notifyStayRequested(booking.id).catch(console.error);
+      notifyRequestReceived(booking.id).catch(console.error);
     } else {
       notifyBookingApproved(booking.id).catch(console.error);
+      notifyStayBooked(booking.id).catch(console.error);
     }
 
     return NextResponse.json({ booking, status: initialStatus });

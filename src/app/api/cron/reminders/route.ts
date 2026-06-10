@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { getBookingWithDetails } from '@/lib/bookings';
 import {
   notifyTripReminder,
+  notifyArrivalWelcome,
   notifyCheckoutInstructions,
   notifyPostStay,
   notifyInvitationsExpiring,
@@ -66,6 +67,12 @@ export async function GET(request: NextRequest) {
     } else if (daysUntilCheckIn === 1) {
       if (!(await wasNotificationSent(id, 'reminder_1d'))) {
         await notifyTripReminder(booking, 1);
+        lifecycleSends++;
+      }
+    } else if (daysUntilCheckIn === 0) {
+      // Morning of arrival: welcome + how to get in.
+      if (!(await wasNotificationSent(id, 'arrival_welcome'))) {
+        await notifyArrivalWelcome(booking);
         lifecycleSends++;
       }
     }

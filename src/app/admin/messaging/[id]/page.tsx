@@ -1,7 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { render } from '@react-email/components';
-import { ArrowLeft, Mail, MessageSquare } from 'lucide-react';
+import {
+  ArrowLeft,
+  Mail,
+  MessageSquare,
+  Users,
+  Zap,
+  Clock,
+  BellOff,
+} from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireSiteAdmin } from '@/lib/auth';
 import { Badge } from '@/components/ui/badge';
@@ -29,9 +37,7 @@ export default async function AdminMessageDetailPage({
     }))
   );
 
-  let recentSends:
-    | { type: string; created_at: string }[]
-    | null = null;
+  let recentSends: { type: string; created_at: string }[] | null = null;
   if (message.logTypes.length > 0) {
     const { data } = await admin
       .from('notifications_log')
@@ -44,49 +50,9 @@ export default async function AdminMessageDetailPage({
 
   const Icon = message.channel === 'sms' ? MessageSquare : Mail;
 
-  const details: { label: string; value: React.ReactNode }[] = [
-    { label: 'Channel', value: message.channel === 'sms' ? 'SMS' : 'Email' },
-    { label: 'Audience', value: message.audience },
-    { label: 'Trigger', value: message.trigger },
-    { label: 'Timing', value: message.timing },
-    {
-      label: 'Can be muted by',
-      value: message.notificationPref ? (
-        <span className="inline-flex items-center gap-2">
-          {message.notificationPref.label} preference
-          {!message.notificationPref.enforced && (
-            <Badge variant="secondary" className="text-[11px]">
-              not yet enforced
-            </Badge>
-          )}
-        </span>
-      ) : (
-        'Not muteable (always sent)'
-      ),
-    },
-    {
-      label: 'Delivery tracking',
-      value:
-        message.logTypes.length > 0 ? (
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-            {message.logTypes.join(', ')}
-          </code>
-        ) : (
-          'Not logged'
-        ),
-    },
-    {
-      label: 'Triggered from',
-      value: (
-        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-          {message.source}
-        </code>
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div>
         <Link
           href="/admin/messaging"
@@ -96,40 +62,73 @@ export default async function AdminMessageDetailPage({
           All messages
         </Link>
 
-        <div className="mt-3 flex items-start gap-3">
+        <div className="mt-4 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
             <Icon className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {message.name}
-            </h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {message.name}
+              </h1>
+              {message.status === 'planned' ? (
+                <Badge variant="secondary">Planned</Badge>
+              ) : (
+                <Badge>Active</Badge>
+              )}
+              <Badge variant="outline">{message.category}</Badge>
+            </div>
             <p className="mt-1 text-muted-foreground">{message.description}</p>
           </div>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
-        <dl className="divide-y text-sm">
-          {details.map((d) => (
-            <div
-              key={d.label}
-              className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[180px_1fr] sm:gap-4"
-            >
-              <dt className="font-medium text-muted-foreground">{d.label}</dt>
-              <dd>{d.value}</dd>
-            </div>
-          ))}
-        </dl>
+      {/* At-a-glance facts */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FactCard
+          icon={<Users className="h-4 w-4" />}
+          label="Who gets it"
+          value={message.audience}
+        />
+        <FactCard
+          icon={<Zap className="h-4 w-4" />}
+          label="When it triggers"
+          value={message.trigger}
+        />
+        <FactCard
+          icon={<Clock className="h-4 w-4" />}
+          label="Timing"
+          value={message.timing}
+        />
+        <FactCard
+          icon={<BellOff className="h-4 w-4" />}
+          label="Opt-out"
+          value={
+            message.notificationPref ? (
+              <span>
+                Via <strong>{message.notificationPref.label}</strong> preference
+                {!message.notificationPref.enforced && (
+                  <Badge variant="secondary" className="ml-1.5 text-[10px]">
+                    not enforced
+                  </Badge>
+                )}
+              </span>
+            ) : (
+              'Always sent — essential email'
+            )
+          }
+        />
       </div>
 
+      {/* Preview */}
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          Content preview
+          What it looks like
         </h2>
         <EmailPreview variants={renderedVariants} />
       </section>
 
+      {/* Recent sends */}
       {recentSends && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
@@ -164,6 +163,41 @@ export default async function AdminMessageDetailPage({
           </div>
         </section>
       )}
+
+      {/* Engineering footnote */}
+      <p className="text-xs text-muted-foreground">
+        Triggered from <code className="rounded bg-muted px-1 py-0.5">{message.source}</code>
+        {message.logTypes.length > 0 && (
+          <>
+            {' '}· logged as{' '}
+            <code className="rounded bg-muted px-1 py-0.5">
+              {message.logTypes.join(', ')}
+            </code>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+function FactCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        {icon}
+        <span className="text-xs font-medium uppercase tracking-wide">
+          {label}
+        </span>
+      </div>
+      <div className="mt-2 text-sm">{value}</div>
     </div>
   );
 }

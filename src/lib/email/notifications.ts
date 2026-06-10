@@ -50,6 +50,9 @@ import TripReminderEmail from '../../../emails/trip-reminder';
 import InvitationExpiringEmail from '../../../emails/invitation-expiring';
 import CheckoutInstructionsEmail from '../../../emails/checkout-instructions';
 import PostStayThankYouEmail from '../../../emails/post-stay-thankyou';
+import StayBookedEmail from '../../../emails/stay-booked';
+import RequestReceivedEmail from '../../../emails/request-received';
+import ArrivalWelcomeEmail from '../../../emails/arrival-welcome';
 
 export async function notifyInvitationSent(invitationId: string) {
   const admin = createAdminClient();
@@ -150,6 +153,101 @@ export async function notifyStayRequested(bookingId: string) {
   }
 
   await logNotification({ bookingId, type: 'stay_requested' });
+}
+
+/**
+ * Tells hosts a booking was created on the auto-approve path (no request to
+ * act on — purely informational so bookings never appear silently).
+ */
+export async function notifyStayBooked(bookingId: string) {
+  const booking = await getBookingWithDetails(bookingId);
+  if (!booking) return;
+
+  const admin = createAdminClient();
+  const { data: property } = await admin
+    .from('properties')
+    .select('*, owner:users!owner_id(*)')
+    .eq('id', booking.property_id)
+    .single();
+
+  if (!property) return;
+
+  const { data: managers } = await admin
+    .from('property_managers')
+    .select('user:users(id, email, notification_prefs)')
+    .eq('property_id', booking.property_id);
+
+  type HostRecipient = {
+    id: string;
+    email: string;
+    notification_prefs?: NotificationPrefs;
+  };
+
+  const recipients = new Map<string, HostRecipient>();
+  const ownerRaw = property.owner;
+  const owner = (Array.isArray(ownerRaw) ? ownerRaw[0] : ownerRaw) as HostRecipient;
+  if (wantsEmail(owner.notification_prefs, 'booking_requests')) {
+    recipients.set(owner.id, owner);
+  }
+
+  for (const m of managers ?? []) {
+    const userRaw = m.user;
+    const user = (Array.isArray(userRaw) ? userRaw[0] : userRaw) as HostRecipient;
+    if (wantsEmail(user.notification_prefs, 'booking_requests')) {
+      recipients.set(user.id, user);
+    }
+  }
+
+  const base = appUrl();
+  const dates = formatDateRange(booking.dates.check_in, booking.dates.check_out);
+  const rooms = booking.rooms.map((r) => r.name).join(', ');
+  const guestLabel = booking.guest.name ?? booking.guest.email ?? 'A guest';
+
+  for (const recipient of recipients.values()) {
+    await sendEmail({
+      to: recipient.email,
+      subject: `${guestLabel} booked a stay at ${booking.property.name}`,
+      react: StayBookedEmail({
+        guestName: guestLabel,
+        propertyName: booking.property.name,
+        dates,
+        rooms,
+        partySize: booking.party_size,
+        notes: booking.notes ?? undefined,
+        bookingUrl: `${base}/dashboard/${booking.property.slug}/bookings/${bookingId}`,
+        unsubscribeUrl: unsubscribePageUrl(recipient.id, 'host_activity'),
+      }),
+      headers: listUnsubscribeHeaders(recipient.id, 'host_activity'),
+    });
+  }
+
+  await logNotification({ bookingId, type: 'stay_booked' });
+}
+
+/**
+ * Receipt to the guest right after they submit a request that needs host
+ * approval. Mandatory (a confirmation of their own action), so no unsubscribe.
+ */
+export async function notifyRequestReceived(bookingId: string) {
+  const booking = await getBookingWithDetails(bookingId);
+  if (!booking || !booking.notify_guest || !booking.guest.email) return;
+
+  await sendEmail({
+    to: booking.guest.email,
+    subject: `Your request for ${booking.property.name} is in`,
+    react: RequestReceivedEmail({
+      guestName: booking.guest.name ?? 'there',
+      propertyName: booking.property.name,
+      dates: formatDateRange(booking.dates.check_in, booking.dates.check_out),
+      rooms: booking.rooms.map((r) => r.name).join(', '),
+    }),
+  });
+
+  await logNotification({
+    userId: booking.guest_user_id ?? undefined,
+    bookingId,
+    type: 'request_received',
+  });
 }
 
 export async function notifyBookingApproved(bookingId: string) {
@@ -333,6 +431,38 @@ export async function notifyTripReminder(
     userId: booking.guest_user_id ?? undefined,
     bookingId: booking.id,
     type,
+  });
+}
+
+export async function notifyArrivalWelcome(booking: BookingWithDetails) {
+  if (!booking.notify_guest || !booking.guest.email) return;
+
+  const delivery = await guestReminderDelivery(booking.guest.id);
+  if (!delivery.ok) return;
+
+  await sendEmail({
+    to: booking.guest.email,
+    subject: `Today's the day — welcome to ${booking.property.name}`,
+    react: ArrivalWelcomeEmail({
+      guestName: booking.guest.name ?? 'there',
+      propertyName: booking.property.name,
+      checkIn: booking.property.check_in_instructions ?? undefined,
+      address: booking.property.address ?? undefined,
+      directions: booking.property.directions ?? undefined,
+      wifiName: booking.property.wifi_name ?? undefined,
+      wifiPassword: booking.property.wifi_password ?? undefined,
+      profileUrl: booking.invitation
+        ? inviteUrl(booking.invitation.token)
+        : undefined,
+      unsubscribeUrl: delivery.unsubscribeUrl,
+    }),
+    headers: delivery.headers,
+  });
+
+  await logNotification({
+    userId: booking.guest_user_id ?? undefined,
+    bookingId: booking.id,
+    type: 'arrival_welcome',
   });
 }
 

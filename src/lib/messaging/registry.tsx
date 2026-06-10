@@ -14,6 +14,9 @@ import AuthConfirmSignupEmail from '../../../emails/auth-confirm-signup';
 import AuthMagicLinkEmail from '../../../emails/auth-magic-link';
 import AuthRecoveryEmail from '../../../emails/auth-recovery';
 import ProductUpdateEmail from '../../../emails/product-update';
+import StayBookedEmail from '../../../emails/stay-booked';
+import RequestReceivedEmail from '../../../emails/request-received';
+import ArrivalWelcomeEmail from '../../../emails/arrival-welcome';
 
 export type MessageChannel = 'email' | 'sms';
 
@@ -244,6 +247,73 @@ export const AUTOMATED_MESSAGES: AutomatedMessage[] = [
     ],
   },
   {
+    id: 'request-received',
+    name: 'Request received',
+    channel: 'email',
+    category: 'Booking requests',
+    recipients: ['guest'],
+    status: 'active',
+    audience: 'Guest',
+    description:
+      'A receipt to the guest confirming their stay request went through and the hosts have been notified. Only sent when the invitation requires approval.',
+    trigger: 'A guest submits a booking that requires host approval.',
+    timing: 'Immediately',
+    logTypes: ['request_received'],
+    notificationPref: null,
+    source: 'src/app/api/bookings/route.ts',
+    variants: [
+      {
+        label: 'Default',
+        subject: `Your request for ${SAMPLE.propertyName} is in`,
+        element: (
+          <RequestReceivedEmail
+            guestName={SAMPLE.guestName}
+            propertyName={SAMPLE.propertyName}
+            dates={SAMPLE.dates}
+            rooms={SAMPLE.rooms}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    id: 'stay-booked',
+    name: 'Stay booked',
+    channel: 'email',
+    category: 'Booking requests',
+    recipients: ['host'],
+    status: 'active',
+    audience: 'Property owner + co-managers',
+    description:
+      'Tells hosts a guest booked a stay that didn\u2019t need approval, so confirmed bookings never appear on the calendar silently.',
+    trigger: 'A guest books via an invitation that doesn\u2019t require approval.',
+    timing: 'Immediately',
+    logTypes: ['stay_booked'],
+    notificationPref: {
+      key: 'booking_requests',
+      label: 'Booking requests',
+      enforced: true,
+    },
+    source: 'src/app/api/bookings/route.ts',
+    variants: [
+      {
+        label: 'Default',
+        subject: `${SAMPLE.guestName} booked a stay at ${SAMPLE.propertyName}`,
+        element: (
+          <StayBookedEmail
+            guestName={SAMPLE.guestName}
+            propertyName={SAMPLE.propertyName}
+            dates={SAMPLE.dates}
+            rooms={SAMPLE.rooms}
+            partySize={SAMPLE.partySize}
+            notes="Bringing two kids and a (very well-behaved) dog if that's okay."
+            bookingUrl={SAMPLE.dashboardUrl}
+          />
+        ),
+      },
+    ],
+  },
+  {
     id: 'booking-approved',
     name: 'Booking confirmed',
     channel: 'email',
@@ -408,6 +478,44 @@ export const AUTOMATED_MESSAGES: AutomatedMessage[] = [
             daysUntil={1}
             checkIn={SAMPLE.checkIn}
             address={SAMPLE.address}
+            wifiName={SAMPLE.wifiName}
+            wifiPassword={SAMPLE.wifiPassword}
+            profileUrl={SAMPLE.inviteUrl}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    id: 'arrival-welcome',
+    name: 'Arrival welcome',
+    channel: 'email',
+    category: 'Reminders',
+    recipients: ['guest'],
+    status: 'active',
+    audience: 'Guest',
+    description:
+      'A day-of welcome with everything needed to get in: check-in instructions, address, directions, and WiFi.',
+    trigger: 'A confirmed booking reaches its check-in date.',
+    timing: 'Scheduled — ~8am local on the day of check-in',
+    logTypes: ['arrival_welcome'],
+    notificationPref: {
+      key: 'guest_reminders',
+      label: 'Stay reminders',
+      enforced: true,
+    },
+    source: 'src/app/api/cron/reminders/route.ts',
+    variants: [
+      {
+        label: 'Default',
+        subject: `Today's the day — welcome to ${SAMPLE.propertyName}`,
+        element: (
+          <ArrivalWelcomeEmail
+            guestName={SAMPLE.guestName}
+            propertyName={SAMPLE.propertyName}
+            checkIn={SAMPLE.checkIn}
+            address={SAMPLE.address}
+            directions={SAMPLE.directions}
             wifiName={SAMPLE.wifiName}
             wifiPassword={SAMPLE.wifiPassword}
             profileUrl={SAMPLE.inviteUrl}
@@ -617,8 +725,8 @@ export const GUEST_JOURNEY: JourneyStep[] = [
     title: 'Your dates have been requested',
     when: 'Moments after you submit your dates',
     description:
-      'A confirmation to the guest that their request is in. Not built yet — today only the host is notified of a new request.',
-    planned: true,
+      'Only when the invitation requires host approval — instant bookings skip straight to the confirmation.',
+    messageIds: ['request-received'],
   },
   {
     title: 'Your dates were approved — or declined',
@@ -638,16 +746,7 @@ export const GUEST_JOURNEY: JourneyStep[] = [
   {
     title: "Welcome — here's how to get in",
     when: 'The morning of check-in',
-    description:
-      'Day-of arrival details: parking, lockbox, what to do first. Not built yet.',
-    planned: true,
-  },
-  {
-    title: 'Tomorrow is your last day',
-    when: 'The evening before checkout',
-    description:
-      'A gentle heads-up the night before departure. Not built yet — checkout details currently send the morning you leave.',
-    planned: true,
+    messageIds: ['arrival-welcome'],
   },
   {
     title: 'Time to head out',
@@ -665,7 +764,15 @@ export const HOST_JOURNEY: JourneyStep[] = [
   {
     title: 'A guest requested a stay',
     when: 'As soon as a guest submits their dates',
+    description: 'When the invitation requires your approval.',
     messageIds: ['stay-requested'],
+  },
+  {
+    title: 'A guest booked a stay',
+    when: 'The moment an instant booking lands on your calendar',
+    description:
+      'When the invitation doesn\u2019t require approval — informational, nothing to act on.',
+    messageIds: ['stay-booked'],
   },
   {
     title: 'A stay was cancelled',
