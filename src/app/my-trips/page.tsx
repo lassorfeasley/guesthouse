@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { requireAuth, getOwnerProperties } from '@/lib/auth';
+import { isSiteAdmin } from '@/lib/site-admin';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VisibilityToggle } from '@/components/guest/visibility-toggle';
 import { TripsView } from '@/components/guest/trips-view';
 import { LogoutButton } from '@/components/logout-button';
 import { SiteFooter } from '@/components/site-footer';
 import { Button } from '@/components/ui/button';
-import { Home } from 'lucide-react';
+import { Home, Shield } from 'lucide-react';
 
 export const metadata = { title: 'My trips' };
 
@@ -14,6 +15,7 @@ export default async function MyTripsPage() {
   const user = await requireAuth();
   const properties = await getOwnerProperties(user.id);
   const isHost = properties.length > 0;
+  const showAdminLink = isSiteAdmin(user);
 
   // Guests can't read rooms/properties under RLS, so their trips would render
   // with null joins (and crash). Query as admin, scoped to the signed-in user.
@@ -38,6 +40,14 @@ export default async function MyTripsPage() {
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <span className="font-semibold">Gracious</span>
           <div className="flex items-center gap-2">
+            {showAdminLink && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin
+                </Link>
+              </Button>
+            )}
             {isHost && (
               <Button variant="outline" size="sm" asChild>
                 <Link href="/dashboard">

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireAuth, getOwnerProperties } from '@/lib/auth';
+import { isSiteAdmin } from '@/lib/site-admin';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardTopNav } from '@/components/dashboard/top-nav';
 import { SiteFooter } from '@/components/site-footer';
@@ -35,6 +36,7 @@ export default async function PropertyDashboardLayout({
         requestCount={requestCount ?? 0}
         userEmail={user.email ?? undefined}
         userId={user.id}
+        showAdminLink={isSiteAdmin(user)}
       />
       <main className="flex-1 px-6 pt-6 pb-32">{children}</main>
       <SiteFooter name={currentProperty.name} />

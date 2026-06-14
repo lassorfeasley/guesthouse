@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAuthenticatedHomePath } from '@/lib/auth';
 import { isDevAdminPreviewEnabled } from '@/lib/dev-tools';
 import { isSiteAdminEmail } from '@/lib/site-admin';
 
@@ -71,11 +72,17 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Redirect logged-in users away from auth pages. The home page routes them to
-  // the right place (admin / dashboard / my-trips) based on their capabilities.
+  // Redirect logged-in users away from auth pages to their default app home.
   if ((pathname === '/login' || pathname === '/signup') && user) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('id, is_admin, email')
+      .eq('id', user.id)
+      .single();
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = profile
+      ? await getAuthenticatedHomePath(profile)
+      : '/my-trips';
     url.search = '';
     return NextResponse.redirect(url);
   }

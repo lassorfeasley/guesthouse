@@ -9,7 +9,8 @@ import {
   CalendarDays,
   Mail,
   LogOut,
-  ExternalLink,
+  Luggage,
+  ArrowLeft,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -32,7 +33,15 @@ const LINKS = [
   { href: '/admin/messaging', label: 'Messaging', icon: Mail },
 ];
 
-export function AdminSidebar({ userEmail }: { userEmail: string }) {
+export function AdminSidebar({
+  userEmail,
+  exitHref,
+  showHostLink,
+}: {
+  userEmail: string;
+  exitHref: string;
+  showHostLink: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -81,10 +90,28 @@ export function AdminSidebar({ userEmail }: { userEmail: string }) {
           {userEmail}
         </div>
         <SidebarMenu>
+          {showHostLink && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Host dashboard">
+                <Link href="/dashboard">
+                  <Home />
+                  <span>Host dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="My trips">
+              <Link href="/my-trips">
+                <Luggage />
+                <span>My trips</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Exit admin">
-              <Link href="/">
-                <ExternalLink />
+              <Link href={exitHref}>
+                <ArrowLeft />
                 <span>Exit admin</span>
               </Link>
             </SidebarMenuButton>

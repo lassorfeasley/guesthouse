@@ -1,4 +1,4 @@
-import { requireSiteAdmin } from '@/lib/auth';
+import { requireSiteAdmin, getNonAdminHomePath, userManagesAnyProperty } from '@/lib/auth';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 import {
   SidebarInset,
@@ -12,10 +12,16 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const user = await requireSiteAdmin();
+  const showHostLink = await userManagesAnyProperty(user.id);
+  const exitHref = await getNonAdminHomePath(user);
 
   return (
     <SidebarProvider>
-      <AdminSidebar userEmail={user.email} />
+      <AdminSidebar
+        userEmail={user.email}
+        exitHref={exitHref}
+        showHostLink={showHostLink}
+      />
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />

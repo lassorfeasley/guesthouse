@@ -13,6 +13,7 @@ import {
   Plus,
   Check,
   Luggage,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -40,6 +41,7 @@ interface DashboardTopNavProps {
   requestCount?: number;
   userEmail?: string;
   userId?: string;
+  showAdminLink?: boolean;
 }
 
 export function DashboardTopNav({
@@ -48,6 +50,7 @@ export function DashboardTopNav({
   requestCount = 0,
   userEmail,
   userId,
+  showAdminLink = false,
 }: DashboardTopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -201,6 +204,14 @@ export function DashboardTopNav({
                   My trips
                 </Link>
               </DropdownMenuItem>
+              {showAdminLink && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {userEmail && (
                 <>
                   <DropdownMenuSeparator />

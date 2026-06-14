@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser, userManagesAnyProperty } from '@/lib/auth';
-import { isSiteAdmin } from '@/lib/site-admin';
+import { getAuthenticatedHomePath, getCurrentUser } from '@/lib/auth';
 import { isLandingPreviewEnabled } from '@/lib/dev-tools';
 import { redirect } from 'next/navigation';
 import { SiteFooter } from '@/components/site-footer';
 import { HowItWorks } from '@/components/landing/how-it-works';
+import { StayShowcase } from '@/components/landing/stay-showcase';
 import { PricingCards } from '@/components/pricing-cards';
 
 export default async function HomePage({
@@ -18,10 +18,8 @@ export default async function HomePage({
 
   const user = await getCurrentUser();
 
-  if (!landingPreview) {
-    if (user && isSiteAdmin(user)) redirect('/admin');
-    if (user && (await userManagesAnyProperty(user.id))) redirect('/dashboard');
-    if (user) redirect('/my-trips');
+  if (!landingPreview && user) {
+    redirect(await getAuthenticatedHomePath(user));
   }
 
   return (
@@ -41,22 +39,26 @@ export default async function HomePage({
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-28 text-center sm:py-36">
-        <p className="text-sm font-medium tracking-wide text-brass">
-          For guest homes and guest rooms
-        </p>
-        <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-6xl">
-          The gracious way to invite house guests.
-        </h1>
-        <p className="mx-auto mt-8 max-w-md text-lg leading-relaxed text-muted-foreground">
-          We take care of inviting, booking, coordinating, directions &amp;
-          conflicts graciously. Be a great host while we do the rest.
-        </p>
-        <div className="mt-12 flex justify-center gap-4">
-          <Button size="lg" asChild>
-            <Link href="/signup">Get started</Link>
-          </Button>
+      <main className="container mx-auto px-4 py-20 sm:py-28">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-medium tracking-wide text-brass">
+            For guest homes and guest rooms
+          </p>
+          <h1 className="mt-6 font-display text-4xl font-medium tracking-tight sm:text-5xl xl:text-6xl">
+            Every room, every guest, on one calendar.
+          </h1>
+          <p className="mx-auto mt-8 max-w-lg text-lg leading-relaxed text-muted-foreground">
+            See who&apos;s staying across all your homes at a glance. We take care
+            of inviting, booking, and coordinating graciously — so you can be a
+            great host while we do the rest.
+          </p>
+          <div className="mt-10 flex justify-center gap-4">
+            <Button size="lg" asChild>
+              <Link href="/signup">Get started</Link>
+            </Button>
+          </div>
         </div>
+        <StayShowcase className="mx-auto mt-16 max-w-4xl sm:mt-20" />
       </main>
 
       <section id="how-it-works" className="border-t border-border/60 py-28">
