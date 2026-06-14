@@ -45,7 +45,7 @@ const row = {
 };
 
 const link = {
-  color: '#1f3d31',
+  color: '#1f3d33',
   textDecoration: 'underline',
 };
 

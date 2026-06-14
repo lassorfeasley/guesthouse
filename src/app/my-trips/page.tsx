@@ -6,6 +6,7 @@ import { VisibilityToggle } from '@/components/guest/visibility-toggle';
 import { TripsView } from '@/components/guest/trips-view';
 import { LogoutButton } from '@/components/logout-button';
 import { SiteFooter } from '@/components/site-footer';
+import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
 import { Home, Shield } from 'lucide-react';
 
@@ -38,7 +39,9 @@ export default async function MyTripsPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <span className="font-semibold">Gracious</span>
+          <Link href="/my-trips" aria-label="Gracious home">
+            <Wordmark className="h-5 text-primary" />
+          </Link>
           <div className="flex items-center gap-2">
             {showAdminLink && (
               <Button variant="outline" size="sm" asChild>

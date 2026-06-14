@@ -57,7 +57,7 @@ const heroImage = {
 };
 
 const heroFallback = {
-  backgroundColor: '#1f3d31',
+  backgroundColor: '#1f3d33',
   borderRadius: '8px',
   height: `${HERO_HEIGHT}px`,
   padding: '0 28px',

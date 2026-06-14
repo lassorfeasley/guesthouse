@@ -10,6 +10,7 @@ import {
   UnsubscribePreferences,
   type PreferenceRow,
 } from '@/components/unsubscribe-preferences';
+import { Wordmark } from '@/components/brand/wordmark';
 
 export const metadata = { title: 'Email preferences' };
 
@@ -46,10 +47,8 @@ export default async function UnsubscribePage({
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <div className="rounded-2xl border bg-card p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Gracious
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+        <Wordmark className="h-5 text-primary" />
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight">
           Email preferences
         </h1>
 

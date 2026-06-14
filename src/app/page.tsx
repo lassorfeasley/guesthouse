@@ -4,6 +4,7 @@ import { getAuthenticatedHomePath, getCurrentUser } from '@/lib/auth';
 import { isLandingPreviewEnabled } from '@/lib/dev-tools';
 import { redirect } from 'next/navigation';
 import { SiteFooter } from '@/components/site-footer';
+import { Wordmark } from '@/components/brand/wordmark';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { StayShowcase } from '@/components/landing/stay-showcase';
 import { PricingCards } from '@/components/pricing-cards';
@@ -26,9 +27,9 @@ export default async function HomePage({
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border/60">
         <div className="container mx-auto flex h-20 items-center justify-between px-6">
-          <span className="font-display text-2xl tracking-tight sm:text-3xl">
-            Gracious
-          </span>
+          <Link href="/" aria-label="Gracious home">
+            <Wordmark className="h-6 text-primary sm:h-7" />
+          </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="lg" className="text-base" asChild>
               <Link href="/login">Sign in</Link>

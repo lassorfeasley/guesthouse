@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SiteFooter } from '@/components/site-footer';
+import { Wordmark } from '@/components/brand/wordmark';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -20,7 +21,9 @@ export default async function DashboardPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b">
         <div className="container mx-auto flex h-14 items-center px-4">
-          <span className="font-semibold">Gracious</span>
+          <Link href="/dashboard" aria-label="Gracious home">
+            <Wordmark className="h-5 text-primary" />
+          </Link>
         </div>
       </header>
       <main className="container mx-auto w-full max-w-2xl px-4 py-12">

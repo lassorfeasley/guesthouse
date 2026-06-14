@@ -55,6 +55,7 @@ export function GuestManageStayCard({
           checkOut={checkOut}
           roomNames={roomNames}
           partySize={partySize}
+          boxed
         />
       </div>
 

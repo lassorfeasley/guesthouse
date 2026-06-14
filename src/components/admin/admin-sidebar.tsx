@@ -13,6 +13,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Logomark } from '@/components/brand/wordmark';
 import {
   Sidebar,
   SidebarContent,
@@ -57,9 +58,14 @@ export function AdminSidebar({
       <SidebarHeader>
         <Link
           href="/admin"
-          className="px-2 py-1.5 font-semibold tracking-tight group-data-[collapsible=icon]:hidden"
+          aria-label="Gracious Admin"
+          className="flex items-center gap-2 px-2 py-1.5"
         >
-          Gracious Admin
+          <Logomark className="h-6 w-6 shrink-0" />
+          <span className="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            Gracious{' '}
+            <span className="font-normal text-muted-foreground">Admin</span>
+          </span>
         </Link>
       </SidebarHeader>
       <SidebarContent>

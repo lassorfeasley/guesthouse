@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { storePendingUpgrade } from '@/lib/billing-client';
 import { slugify } from '@/lib/slug';
+import { Wordmark } from '@/components/brand/wordmark';
 import {
   signupSchema,
   BED_SIZES,
@@ -334,7 +335,9 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between px-6 py-5">
-        <span className="text-sm font-semibold tracking-tight">Gracious</span>
+        <Link href="/" aria-label="Gracious home">
+          <Wordmark className="h-5 text-primary" />
+        </Link>
         <p className="text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link href="/login" className="font-medium text-foreground underline">

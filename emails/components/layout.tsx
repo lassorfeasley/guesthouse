@@ -5,12 +5,21 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from '@react-email/components';
 import * as React from 'react';
+
+/*
+ * Email clients need absolute asset URLs. Read the app origin directly from the
+ * environment (not via the `@/` alias) so the react-email preview CLI — which
+ * doesn't resolve TS path aliases — can still render these templates.
+ */
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://gracious.host';
+const logoSrc = `${baseUrl}/brand/email-logo.png`;
 
 interface EmailLayoutProps {
   preview: string;
@@ -35,7 +44,13 @@ export function EmailLayout({
       <Preview>{preview}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Text style={logo}>Gracious</Text>
+          <Img
+            src={logoSrc}
+            alt="Gracious"
+            width={132}
+            height={33}
+            style={logo}
+          />
           {hero}
           <Heading style={h1}>{heading}</Heading>
           <Section style={content}>{children}</Section>
@@ -86,11 +101,9 @@ const container = {
 };
 
 const logo = {
-  fontSize: '14px',
-  fontWeight: '600' as const,
-  color: '#a2773e',
-  letterSpacing: '0.2em',
-  textTransform: 'uppercase' as const,
+  display: 'block',
+  width: '132px',
+  height: 'auto',
   margin: '0 0 24px',
 };
 
@@ -133,14 +146,14 @@ const footerLink = {
  * clipped in most mail clients.
  */
 export const fallbackLinkStyle = {
-  color: '#1f3d31',
+  color: '#1f3d33',
   textDecoration: 'underline',
   wordBreak: 'break-all' as const,
   overflowWrap: 'anywhere' as const,
 };
 
 export const buttonStyle = {
-  backgroundColor: '#1f3d31',
+  backgroundColor: '#1f3d33',
   color: '#f7f4ed',
   padding: '12px 24px',
   borderRadius: '6px',

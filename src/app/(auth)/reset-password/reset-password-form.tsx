@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +28,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Wordmark } from '@/components/brand/wordmark';
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -56,7 +58,10 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+      <Link href="/" aria-label="Gracious home">
+        <Wordmark className="h-7 text-primary" />
+      </Link>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Set a new password</CardTitle>

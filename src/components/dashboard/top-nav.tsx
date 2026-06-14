@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CreatePropertyForm } from '@/components/dashboard/create-property-form';
+import { Wordmark } from '@/components/brand/wordmark';
 
 interface DashboardTopNavProps {
   properties: Property[];
@@ -81,8 +82,8 @@ export function DashboardTopNav({
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
-        <Link href="/dashboard" className="font-semibold tracking-tight">
-          Gracious
+        <Link href="/dashboard" aria-label="Gracious home">
+          <Wordmark className="h-5 text-primary" />
         </Link>
 
         <nav className="ml-auto flex items-center gap-1">
