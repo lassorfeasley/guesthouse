@@ -6,6 +6,7 @@ import { GuestsScheduleView } from '@/components/dashboard/guests-schedule-view'
 import { ComposePageActions } from '@/components/dashboard/compose-page-actions';
 import { InvitationsManager } from '@/components/dashboard/invitations-manager';
 import { buildScheduleStays } from '@/lib/schedule-stays';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import type { Invitation } from '@/types/database';
 
 export const metadata = { title: 'Guests' };
@@ -59,7 +60,7 @@ export default async function GuestsPage({
   );
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <DashboardContainer className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -91,6 +92,6 @@ export default async function GuestsPage({
           hideInviteAction
         />
       </section>
-    </div>
+    </DashboardContainer>
   );
 }

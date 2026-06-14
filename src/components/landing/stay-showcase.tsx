@@ -3,13 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { StayTimeline, type TimelineRow } from '@/components/stay-timeline';
 
 /*
  * Landing-page hero showcase: an auto-rotating set of homes, each with its own
- * room-by-room calendar. Hardcoded fictional data — a lookalike of the real
- * dashboard calendar (pine = confirmed, brass = pending), never a live
- * component. Rotation stops the moment a visitor takes control by clicking a
- * tab, and pauses while they hover the panel.
+ * room-by-room timeline. Hardcoded fictional data — a lookalike of the real
+ * dashboard schedule (pine = confirmed, brass = pending), never a live
+ * component. The timeline rendering itself is the shared `StayTimeline`
+ * design-system component (also used by the host dashboard); this wrapper only
+ * supplies demo data and the home-tab rotation. Rotation stops the moment a
+ * visitor takes control by clicking a tab, and pauses while they hover the
+ * panel.
  */
 
 type StayStatus = 'confirmed' | 'pending';
@@ -39,14 +43,14 @@ interface DemoHome {
 }
 
 /* A two-week window in June 2026. The 8th is a Monday. */
-const WINDOW_START = 8;
-const WINDOW_DAYS = Array.from({ length: 14 }, (_, i) => {
-  const day = WINDOW_START + i;
-  // June 8 = Monday; index 5,6 and 12,13 are Sat/Sun.
-  const weekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i % 7];
-  const weekend = i % 7 === 5 || i % 7 === 6;
-  return { day, weekday, weekend };
-});
+const WINDOW_START_DAY = 8;
+const WINDOW_DAYS_COUNT = 14;
+const WINDOW_START_ISO = demoISO(WINDOW_START_DAY);
+
+/** Day-of-month within the demo window → ISO date string (always June 2026). */
+function demoISO(dayOfMonth: number): string {
+  return `2026-06-${String(dayOfMonth).padStart(2, '0')}`;
+}
 
 const HOMES: DemoHome[] = [
   {
@@ -129,16 +133,6 @@ const HOMES: DemoHome[] = [
 
 const ROTATE_MS = 4500;
 
-const STAY_CLASS: Record<StayStatus, string> = {
-  confirmed: 'bg-primary/10 text-primary',
-  pending: 'border border-dashed border-brass/50 bg-brass/10 text-brass',
-};
-
-const DOT_CLASS: Record<StayStatus, string> = {
-  confirmed: 'bg-primary',
-  pending: 'bg-brass',
-};
-
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -151,97 +145,32 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-function StayBand({ stay }: { stay: DemoStay }) {
-  return (
-    <div
-      style={{
-        gridColumnStart: stay.start - WINDOW_START + 1,
-        gridColumnEnd: stay.end - WINDOW_START + 2,
-      }}
-      className="flex min-w-0 items-center px-0.5"
-    >
-        <span
-          className={cn(
-            'flex h-8 w-full min-w-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium leading-none',
-            STAY_CLASS[stay.status]
-          )}
-        >
-        <span
-          className={cn('size-1.5 shrink-0 rounded-full', DOT_CLASS[stay.status])}
-          aria-hidden
-        />
-        <span className="truncate">{stay.guest}</span>
-      </span>
-    </div>
-  );
-}
-
-function RoomRow({ room }: { room: DemoRoom }) {
-  return (
-    <div className="flex items-stretch">
-      <div className="flex w-24 shrink-0 items-center pr-3 text-xs font-medium text-muted-foreground sm:w-28">
-        <span className="truncate">{room.name}</span>
-      </div>
-      <div className="relative flex-1">
-        {/* Background guides + weekend tint */}
-        <div className="absolute inset-0 grid grid-cols-[repeat(14,minmax(0,1fr))]">
-          {WINDOW_DAYS.map((d, i) => (
-            <div
-              key={d.day}
-              className={cn(
-                'border-l border-border/40',
-                i === WINDOW_DAYS.length - 1 && 'border-r',
-                d.weekend && 'bg-muted/40'
-              )}
-            />
-          ))}
-        </div>
-        {/* Stay bands */}
-        <div className="relative grid h-11 grid-cols-[repeat(14,minmax(0,1fr))] items-center">
-          {room.stays.map((stay) => (
-            <StayBand key={`${stay.guest}-${stay.start}`} stay={stay} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+/** Map the demo home's day-of-month stays onto the shared timeline shape. */
+function homeToRows(home: DemoHome): TimelineRow[] {
+  return home.rooms.map((room, roomIndex) => ({
+    id: `${home.id}-${roomIndex}`,
+    label: room.name,
+    stays: room.stays.map((stay, stayIndex) => ({
+      id: `${home.id}-${roomIndex}-${stayIndex}`,
+      label: stay.guest,
+      checkIn: demoISO(stay.start),
+      // Demo `end` is the last occupied day; the timeline wants an exclusive
+      // checkout (the morning after).
+      checkOut: demoISO(stay.end + 1),
+      variant: stay.status,
+    })),
+  }));
 }
 
 function HomePanel({ home }: { home: DemoHome }) {
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="overflow-x-auto pb-1">
-        <div className="min-w-[440px]">
-          {/* Date header */}
-          <div className="flex items-end">
-            <div className="flex w-24 shrink-0 items-end pb-2 sm:w-28">
-              <span className="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">
-                Guest rooms
-              </span>
-            </div>
-            <div className="grid flex-1 grid-cols-[repeat(14,minmax(0,1fr))] text-center">
-              {WINDOW_DAYS.map((d) => (
-                <div key={d.day} className="pb-2">
-                  <span
-                    className={cn(
-                      'block text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]',
-                      d.weekend ? 'text-muted-foreground/60' : 'text-muted-foreground'
-                    )}
-                  >
-                    {d.weekday}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1 border-t border-border/60 pt-1">
-            {home.rooms.map((room) => (
-              <RoomRow key={room.name} room={room} />
-            ))}
-          </div>
-        </div>
-      </div>
+      <StayTimeline
+        rows={homeToRows(home)}
+        windowStart={WINDOW_START_ISO}
+        windowDays={WINDOW_DAYS_COUNT}
+        surfaceClassName="bg-card"
+      />
     </div>
   );
 }

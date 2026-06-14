@@ -5,6 +5,7 @@ import { AvailabilityCalendar } from '@/components/dashboard/availability-calend
 import { BookingRequests } from '@/components/dashboard/booking-requests';
 import { getInvitationRoomAvailability } from '@/lib/guest-availability';
 import { ComposePageActions } from '@/components/dashboard/compose-page-actions';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 
 export const metadata = { title: 'Requests' };
 
@@ -66,7 +67,7 @@ export default async function RequestsPage({
   );
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10">
+    <DashboardContainer width="standard" className="space-y-10">
       {quickActionResult && (
         <div
           className={
@@ -103,7 +104,7 @@ export default async function RequestsPage({
       </section>
 
       <BookingRequests bookings={bookings ?? []} slug={slug} />
-    </div>
+    </DashboardContainer>
   );
 }
 

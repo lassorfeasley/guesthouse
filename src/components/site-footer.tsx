@@ -9,9 +9,9 @@ export function SiteFooter({ name }: { name?: string }) {
         ) : (
           <Wordmark className="h-5 text-primary" />
         )}
-        <p className="text-sm text-muted-foreground">
-          {name ? 'Powered by Gracious' : 'The art of having people to stay.'}
-        </p>
+        {name && (
+          <p className="text-sm text-muted-foreground">Powered by Gracious</p>
+        )}
       </div>
     </footer>
   );

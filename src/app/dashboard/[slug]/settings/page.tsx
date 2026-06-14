@@ -4,6 +4,7 @@ import { getDashboardProperty } from '@/lib/dashboard-property';
 import { SettingsForm } from '@/components/dashboard/settings-form';
 import { SubscriptionCard } from '@/components/dashboard/subscription-card';
 import { getAccountUsage } from '@/lib/billing';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 
 export const metadata = { title: 'Settings' };
 
@@ -37,7 +38,7 @@ export default async function SettingsPage({
   });
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <DashboardContainer width="form">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -63,6 +64,6 @@ export default async function SettingsPage({
           managers={managers}
         />
       </div>
-    </div>
+    </DashboardContainer>
   );
 }

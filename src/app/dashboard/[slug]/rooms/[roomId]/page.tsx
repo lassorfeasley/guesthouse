@@ -7,6 +7,7 @@ import { getDashboardProperty } from '@/lib/dashboard-property';
 import { summarizeBeds, BED_SIZE_LABELS } from '@/lib/validations';
 import { AvailabilityBlocks } from '@/components/dashboard/availability-blocks';
 import { HostPageShell } from '@/components/dashboard/host-page-shell';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import { HostCalendarSection } from '@/components/dashboard/host-calendar-section';
 import { PropertyMap } from '@/components/dashboard/property-map';
 import { SectionNav } from '@/components/dashboard/section-nav';
@@ -88,7 +89,7 @@ export default async function RoomProfilePage({
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <DashboardContainer>
       <div className="flex items-center justify-between gap-4">
         <Link
           href={`/dashboard/${slug}/overview`}
@@ -324,6 +325,6 @@ export default async function RoomProfilePage({
         </div>
       </section>
       </HostPageShell>
-    </div>
+    </DashboardContainer>
   );
 }

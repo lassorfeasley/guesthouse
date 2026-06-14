@@ -10,6 +10,7 @@ import { formatDateRange } from '@/lib/dates';
 import { createClient } from '@/lib/supabase/server';
 import { PropertySections } from '@/components/property-sections';
 import { BookingManageView } from '@/components/dashboard/booking-manage-view';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import type { RoomAvailability } from '@/lib/guest-calendar';
 
 function excludeBooking(
@@ -73,7 +74,7 @@ export default async function ManageBookingPage({
     .join(' · ');
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <DashboardContainer>
       <Link
         href={`/dashboard/${slug}/requests`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -115,6 +116,6 @@ export default async function ManageBookingPage({
       >
         <PropertySections property={property} />
       </BookingManageView>
-    </div>
+    </DashboardContainer>
   );
 }

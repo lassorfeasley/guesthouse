@@ -18,7 +18,7 @@ export default async function Image({
 
   if (!invitation) {
     return new ImageResponse(
-      <BrandCard tagline="The art of having people to stay." />,
+      <BrandCard />,
       { ...size, fonts }
     );
   }

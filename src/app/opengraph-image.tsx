@@ -8,7 +8,7 @@ export const contentType = 'image/png';
 
 export default async function Image() {
   return new ImageResponse(
-    <BrandCard tagline="The art of having people to stay." />,
+    <BrandCard />,
     { ...size, fonts: await loadOgFonts() }
   );
 }

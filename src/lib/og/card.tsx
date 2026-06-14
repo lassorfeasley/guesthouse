@@ -25,7 +25,7 @@ export async function loadOgFonts() {
 }
 
 /** Centered brand card — the sitewide default OG image. */
-export function BrandCard({ tagline }: { tagline: string }) {
+export function BrandCard({ tagline }: { tagline?: string }) {
   return (
     <div
       style={{
@@ -48,16 +48,18 @@ export function BrandCard({ tagline }: { tagline: string }) {
       >
         Gracious
       </div>
-      <div
-        style={{
-          fontFamily: 'Inter',
-          fontSize: 32,
-          marginTop: 28,
-          color: 'rgba(250, 248, 244, 0.78)',
-        }}
-      >
-        {tagline}
-      </div>
+      {tagline && (
+        <div
+          style={{
+            fontFamily: 'Inter',
+            fontSize: 32,
+            marginTop: 28,
+            color: 'rgba(250, 248, 244, 0.78)',
+          }}
+        >
+          {tagline}
+        </div>
+      )}
     </div>
   );
 }

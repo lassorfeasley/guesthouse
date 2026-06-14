@@ -7,6 +7,7 @@ import { getInvitationRoomAvailability } from '@/lib/guest-availability';
 import { ComposePageActions } from '@/components/dashboard/compose-page-actions';
 import { HostPageShell } from '@/components/dashboard/host-page-shell';
 import { HostCalendarSection } from '@/components/dashboard/host-calendar-section';
+import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import { RoomEditDialog } from '@/components/dashboard/room-edit-dialog';
 import { PropertyEditDialog } from '@/components/dashboard/property-edit-dialog';
 import { PropertyMap } from '@/components/dashboard/property-map';
@@ -95,7 +96,7 @@ export default async function OverviewPage({
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <DashboardContainer>
       {/* Title */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -429,6 +430,6 @@ export default async function OverviewPage({
         )}
       </section>
       </HostPageShell>
-    </div>
+    </DashboardContainer>
   );
 }
