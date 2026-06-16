@@ -44,6 +44,9 @@ export interface TimelineRow {
   id: string;
   /** Row heading (e.g. room name). */
   label: string;
+  /** Optional grouping (e.g. home name). Consecutive rows sharing a group get
+   * a group header row above them, and their labels are indented. */
+  group?: string;
   stays: TimelineStay[];
 }
 
@@ -67,6 +70,8 @@ interface StayTimelineProps {
   surfaceClassName?: string;
   /** Renders a legend of the stay variants present in `rows`. */
   showLegend?: boolean;
+  /** Renders a month label band above the day columns. */
+  showMonths?: boolean;
   /** Message shown when there are no rows. */
   emptyLabel?: string;
   className?: string;
@@ -189,6 +194,7 @@ export function StayTimeline({
   labelWidth = 112,
   surfaceClassName = 'bg-background',
   showLegend = false,
+  showMonths = false,
   emptyLabel = 'Nothing scheduled yet.',
   className,
 }: StayTimelineProps) {
@@ -198,6 +204,25 @@ export function StayTimeline({
   const today = startOfDay(new Date());
   const trackWidth = windowDays * dayWidth;
   const gridCols = `repeat(${windowDays}, minmax(0, 1fr))`;
+
+  // Contiguous runs of days that share a calendar month, for the month band.
+  const monthSegments: { label: string; startCol: number; endCol: number }[] = [];
+  for (let i = 0; i < days.length; ) {
+    let j = i;
+    while (
+      j < days.length &&
+      days[j].getMonth() === days[i].getMonth() &&
+      days[j].getFullYear() === days[i].getFullYear()
+    ) {
+      j++;
+    }
+    monthSegments.push({
+      label: format(days[i], 'MMMM yyyy'),
+      startCol: i + 1,
+      endCol: j + 1,
+    });
+    i = j;
+  }
 
   const presentVariants = new Set<TimelineStayVariant>();
   for (const row of rows) {
@@ -250,6 +275,33 @@ export function StayTimeline({
         className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div style={{ minWidth: labelWidth + trackWidth }}>
+          {/* Month band */}
+          {showMonths && (
+            <div className="flex items-end">
+              <div
+                className={cn(
+                  'sticky left-0 z-20 shrink-0 self-stretch border-r border-border/60',
+                  surfaceClassName
+                )}
+                style={{ width: labelWidth }}
+              />
+              <div
+                className="grid min-w-0 flex-1"
+                style={{ gridTemplateColumns: gridCols }}
+              >
+                {monthSegments.map((seg) => (
+                  <div
+                    key={seg.label}
+                    style={{ gridColumnStart: seg.startCol, gridColumnEnd: seg.endCol }}
+                    className="sticky left-0 truncate pb-1.5 pl-1 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70"
+                  >
+                    {seg.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Date header */}
           <div className="flex items-end">
             <div
@@ -305,11 +357,32 @@ export function StayTimeline({
             </div>
           ) : (
             <div className="border-t border-border/60">
-              {rows.map((row) => (
-                <div key={row.id} className="flex items-stretch">
+              {rows.map((row, rowIndex) => {
+                const showGroupHeader =
+                  !!row.group && row.group !== rows[rowIndex - 1]?.group;
+                return (
+                <div key={row.id}>
+                  {showGroupHeader && (
+                    <div className="flex items-stretch border-t border-border/60 first:border-t-0">
+                      <div
+                        className={cn(
+                          'sticky left-0 z-10 flex shrink-0 items-center border-r border-border/60 py-2 pr-3',
+                          surfaceClassName
+                        )}
+                        style={{ width: labelWidth }}
+                      >
+                        <span className="truncate text-xs font-semibold uppercase tracking-wide text-foreground">
+                          {row.group}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1" />
+                    </div>
+                  )}
+                <div className="flex items-stretch">
                   <div
                     className={cn(
                       'sticky left-0 z-10 flex shrink-0 items-center border-r border-border/60 pr-3',
+                      row.group ? 'pl-3' : '',
                       surfaceClassName
                     )}
                     style={{ width: labelWidth }}
@@ -354,7 +427,9 @@ export function StayTimeline({
                     </div>
                   </div>
                 </div>
-              ))}
+                </div>
+                );
+              })}
             </div>
           )}
         </div>

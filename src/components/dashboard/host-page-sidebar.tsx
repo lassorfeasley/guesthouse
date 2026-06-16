@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -54,11 +54,14 @@ export function HostPageSidebar({
   rooms,
   roomAvailability,
   preselectedRoomIds,
+  headerSlot,
 }: {
   propertyId: string;
   rooms: Room[];
   roomAvailability: Record<string, RoomAvailability>;
   preselectedRoomIds?: string[];
+  /** Optional content rendered inside the card, above the booking summary. */
+  headerSlot?: ReactNode;
 }) {
   const {
     checkIn,
@@ -88,6 +91,7 @@ export function HostPageSidebar({
   return (
     <div className="space-y-4">
       <div className="rounded-2xl p-6 shadow-[0_6px_16px_rgba(0,0,0,0.12)]">
+        {headerSlot && <div className="mb-5">{headerSlot}</div>}
         <div className="flex items-baseline justify-between">
           <p className="text-xl font-semibold">
             {nights > 0

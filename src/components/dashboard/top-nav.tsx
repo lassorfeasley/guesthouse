@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -14,6 +13,7 @@ import {
   Check,
   Luggage,
   Shield,
+  LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -27,13 +27,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { CreatePropertyForm } from '@/components/dashboard/create-property-form';
 import { Wordmark } from '@/components/brand/wordmark';
 
 interface DashboardTopNavProps {
@@ -55,7 +48,6 @@ export function DashboardTopNav({
 }: DashboardTopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [addHomeOpen, setAddHomeOpen] = useState(false);
   const base = `/dashboard/${currentProperty.slug}`;
   const settingsHref = `${base}/settings`;
 
@@ -102,10 +94,17 @@ export function DashboardTopNav({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`${base}/overview`}>Overview</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {properties.length > 1 && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">
+                      <LayoutGrid className="mr-2 h-4 w-4" />
+                      All homes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               {properties.map((p) => (
                 <DropdownMenuItem key={p.id} asChild>
                   <Link
@@ -122,29 +121,16 @@ export function DashboardTopNav({
               {userId && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setAddHomeOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add another home
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/add-home">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add another home
+                    </Link>
                   </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {userId && (
-            <Dialog open={addHomeOpen} onOpenChange={setAddHomeOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Add another home</DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground">
-                  Create a separate listing with its own rooms, calendar, and
-                  guest invitations.
-                </p>
-                <CreatePropertyForm userId={userId} />
-              </DialogContent>
-            </Dialog>
-          )}
 
           <Link
             href={`${base}/guests`}
