@@ -1,4 +1,4 @@
--- GuestHouse initial schema
+-- Gracious initial schema
 
 -- Custom types
 CREATE TYPE user_role AS ENUM ('owner', 'guest');

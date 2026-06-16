@@ -29,7 +29,7 @@ export default async function HomePage({
       <header className="border-b border-border/60">
         <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
           <Link href="/" className="min-w-0 shrink" aria-label="Gracious home">
-            <Wordmark className="h-5 text-primary sm:h-7" />
+            <Wordmark className="h-5 text-primary sm:h-6" />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Button variant="ghost" size="sm" className="px-3 sm:h-10 sm:px-4 sm:text-base" asChild>

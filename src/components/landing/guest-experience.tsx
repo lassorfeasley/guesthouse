@@ -307,7 +307,7 @@ export function GuestExperience({ className }: { className?: string }) {
         <div className="mt-12 lg:mt-0">
           <div
             ref={rootRef}
-            className="relative mx-auto h-[min(600px,80vw)] w-full max-w-[30rem] overflow-x-clip [overflow-clip-margin:3.5rem] sm:h-[600px]"
+            className="relative mx-auto h-[min(600px,80vw)] w-full max-w-[30rem] overflow-x-clip [overflow-clip-margin:5rem] sm:h-[600px]"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
           >
@@ -322,7 +322,7 @@ export function GuestExperience({ className }: { className?: string }) {
               let zIndex = N - depth;
 
               if (isExitingCard) {
-                transform = 'translateX(115%) rotate(7deg)';
+                transform = 'translateX(160%) rotate(7deg)';
                 opacity = 0;
                 zIndex = N + 1;
               } else {
