@@ -307,7 +307,7 @@ export function GuestExperience({ className }: { className?: string }) {
         <div className="mt-12 lg:mt-0">
           <div
             ref={rootRef}
-            className="relative mx-auto h-[min(600px,80vw)] w-full max-w-[30rem] overflow-x-clip [overflow-clip-margin:2rem] sm:h-[600px]"
+            className="relative mx-auto h-[min(600px,80vw)] w-full max-w-[30rem] overflow-x-clip [overflow-clip-margin:3.5rem] sm:h-[600px]"
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
           >

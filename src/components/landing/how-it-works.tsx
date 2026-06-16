@@ -17,17 +17,17 @@ interface Beat {
 const BEATS: Beat[] = [
   {
     title: 'Tell us about your home',
-    body: 'Add your rooms, your photographs, and the notes guests should read before they arrive. Set aside the weeks you are keeping for yourselves.',
+    body: 'Add your rooms, your photographs, and the notes guests should read before they arrive.',
     artifact: <HouseReadyArtifact />,
   },
   {
     title: 'Extend the invitation',
-    body: 'Invitations go to the people you would trust with a key — never a public page. Guests see the house, pick their dates, and confirm their stay.',
+    body: 'Guests see the house, pick their dates, and confirm their stay.',
     artifact: <InvitationArtifact />,
   },
   {
     title: 'We handle the correspondence',
-    body: 'The right note at the right moment — a warm welcome, directions and door codes before arrival, a gentle word at checkout. Every guest feels expected.',
+    body: 'The right note at the right moment — a warm welcome, directions and door codes before arrival, a gentle word at checkout.',
     artifact: <CorrespondenceArtifact />,
   },
 ];
@@ -62,11 +62,9 @@ export function HowItWorks({ className }: { className?: string }) {
           How it works
         </p>
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          From spare room to standing invitation
+          Graciously build a calendar that makes planning visits effortless for
+          you and your guests
         </h2>
-        <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-          Setting up takes an evening. We carry everything after.
-        </p>
       </div>
 
       <div className="mt-8 lg:mt-6 lg:grid lg:grid-cols-2 lg:gap-20">
@@ -124,16 +122,10 @@ export function HowItWorks({ className }: { className?: string }) {
       </div>
 
       <div className="mx-auto mt-24 max-w-xl text-center lg:mt-12">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-brass">
-          And you
-        </p>
         <h3 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          You focus on gracious hosting.
+          Gracious handles scheduling and logistics so you can focus on creating
+          a memorable experience with your guests.
         </h3>
-        <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
-          The kettle, the fresh sheets, the long dinner. We take care of the
-          rest.
-        </p>
       </div>
     </div>
   );

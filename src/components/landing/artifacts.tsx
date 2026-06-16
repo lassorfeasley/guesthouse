@@ -2,6 +2,7 @@
 
 import { Check, Minus, Plus, Send, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /*
@@ -35,9 +36,19 @@ function ArtifactCard({
 /* ------------------------------------------------------------------ */
 
 const DEMO_ROOMS = [
-  { name: 'The Garden Room', detail: 'Queen bed · sleeps 2' },
-  { name: 'The Loft', detail: 'Two twins · sleeps 2' },
+  {
+    name: 'The Garden Room',
+    detail: 'Queen bed · sleeps 2',
+    image: '/houses/room-garden.png',
+  },
+  {
+    name: 'The Loft',
+    detail: 'Two twins · sleeps 2',
+    image: '/houses/room-loft.png',
+  },
 ];
+
+const DEMO_AMENITIES = ['Lake access', 'Wi-Fi', 'Wood stove', 'Kayaks', 'Parking'];
 
 export function HouseReadyArtifact() {
   return (
@@ -50,29 +61,32 @@ export function HouseReadyArtifact() {
           The Lake House
         </p>
       </div>
-      <div className="divide-y divide-border/60">
+      <div className="grid grid-cols-2 gap-3 px-5 py-4">
         {DEMO_ROOMS.map((room) => (
-          <div key={room.name} className="flex items-center gap-3 px-5 py-3.5">
-            <div className="size-9 shrink-0 rounded-lg bg-secondary" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{room.name}</p>
-              <p className="text-xs text-muted-foreground">{room.detail}</p>
+          <div key={room.name}>
+            <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl border border-border/60">
+              <Image
+                src={room.image}
+                alt={room.name}
+                fill
+                sizes="200px"
+                className="object-cover"
+              />
             </div>
-            <Check className="ml-auto size-4 shrink-0 text-success" />
+            <p className="mt-2 text-sm font-medium">{room.name}</p>
+            <p className="text-xs text-muted-foreground">{room.detail}</p>
           </div>
         ))}
       </div>
-      <div className="border-t border-border/60 bg-background/60 px-5 py-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          House notes
-        </p>
-        <p className="mt-1.5 text-sm italic leading-relaxed text-muted-foreground">
-          &ldquo;The spare key lives under the blue planter. Help yourself to
-          anything in the garden.&rdquo;
-        </p>
-        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs text-secondary-foreground">
-          Kept for family &middot; Aug 12&ndash;19
-        </p>
+      <div className="flex flex-wrap gap-1.5 border-t border-border/60 bg-background/60 px-5 py-4">
+        {DEMO_AMENITIES.map((amenity) => (
+          <span
+            key={amenity}
+            className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+          >
+            {amenity}
+          </span>
+        ))}
       </div>
     </ArtifactCard>
   );
