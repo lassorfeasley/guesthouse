@@ -13,6 +13,7 @@ export async function HostPageShell({
   lockRoomSelection = false,
   preselectedRoomIds,
   className,
+  leading,
   children,
 }: {
   propertyId: string;
@@ -21,6 +22,8 @@ export async function HostPageShell({
   lockRoomSelection?: boolean;
   preselectedRoomIds?: string[];
   className?: string;
+  /** Optional content rendered atop the left column, above the divided sections. */
+  leading?: React.ReactNode;
   children: React.ReactNode;
 }) {
   // No rooms yet (e.g. a freshly created home): the booking sidebar can't be
@@ -35,7 +38,10 @@ export async function HostPageShell({
             className
           )}
         >
-          <div className="min-w-0 divide-y">{children}</div>
+          <div className="min-w-0">
+            {leading}
+            <div className={cn('divide-y', leading && 'mt-2')}>{children}</div>
+          </div>
           <aside className="lg:sticky lg:top-28 lg:self-start">
             <AddRoomSidebar propertyId={propertyId} />
           </aside>
@@ -58,6 +64,7 @@ export async function HostPageShell({
       lockRoomSelection={lockRoomSelection}
       preselectedRoomIds={preselectedRoomIds}
       className={className}
+      leading={leading}
     >
       {children}
     </HostPageLayout>

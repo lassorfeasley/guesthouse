@@ -16,6 +16,7 @@ export function HostPageLayout({
   stickyTop = 'lg:top-28',
   className,
   preselectedRoomIds,
+  leading,
   children,
 }: {
   propertyId: string;
@@ -26,6 +27,8 @@ export function HostPageLayout({
   stickyTop?: string;
   className?: string;
   preselectedRoomIds?: string[];
+  /** Optional content rendered atop the left column, above the divided sections. */
+  leading?: ReactNode;
   children: ReactNode;
 }) {
   const bookableRooms = rooms.map((r) => ({
@@ -53,7 +56,10 @@ export function HostPageLayout({
           className
         )}
       >
-        <div className="min-w-0 divide-y">{children}</div>
+        <div className="min-w-0">
+          {leading}
+          <div className={cn('divide-y', leading && 'mt-2')}>{children}</div>
+        </div>
         <aside className={cn('lg:sticky lg:self-start', stickyTop)}>
           <HostPageSidebar
             propertyId={propertyId}

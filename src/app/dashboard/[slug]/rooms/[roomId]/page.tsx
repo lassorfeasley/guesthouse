@@ -1,10 +1,7 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, BedDouble, Check, UserPlus, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getDashboardProperty } from '@/lib/dashboard-property';
-import { summarizeBeds, BED_SIZE_LABELS } from '@/lib/validations';
 import { AvailabilityBlocks } from '@/components/dashboard/availability-blocks';
 import { HostPageShell } from '@/components/dashboard/host-page-shell';
 import { DashboardContainer } from '@/components/dashboard/dashboard-container';
@@ -16,11 +13,14 @@ import { RoomEditDialog } from '@/components/dashboard/room-edit-dialog';
 import { DeleteRoomButton } from '@/components/dashboard/delete-room-button';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Button } from '@/components/ui/button';
-import type { Amenity } from '@/types/database';
-
-function bedLabel(bed: string): string {
-  return BED_SIZE_LABELS[bed as keyof typeof BED_SIZE_LABELS] ?? bed;
-}
+import {
+  RoomHero,
+  RoomAboutSection,
+  RoomBedsSection,
+  RoomAmenitiesSection,
+  RoomBreadcrumb,
+  ReturnToHouseCard,
+} from '@/components/room-profile';
 
 export const metadata = { title: 'Room' };
 
@@ -91,81 +91,13 @@ export default async function RoomProfilePage({
   return (
     <DashboardContainer>
       <div className="flex items-center justify-between gap-4">
-        <Link
-          href={`/dashboard/${slug}/overview`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to home
-        </Link>
+        <RoomBreadcrumb
+          houseHref={`/dashboard/${slug}/overview`}
+          houseName={property.name}
+          roomName={room.name}
+        />
         {roomActions}
       </div>
-
-      {room.image_url ? (
-        <>
-          {/* Title */}
-          <div className="mt-3">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {room.name}
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-            </p>
-          </div>
-
-          {/* Hero */}
-          <div className="mt-6 overflow-hidden rounded-2xl">
-            <div className="relative h-72 w-full sm:h-[420px]">
-              <Image
-                src={room.image_url}
-                alt={room.name}
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Hero with overlaid info (no photo yet) */
-        <>
-          <div className="relative mt-4 flex h-72 w-full flex-col justify-end overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 p-6 sm:h-[420px]">
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {room.name}
-            </h1>
-            <p className="mt-2 text-white/70">
-              Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-            </p>
-          </div>
-        </>
-      )}
-
-      <section id="photos" className="scroll-mt-28">
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <h2 className="text-[22px] font-semibold tracking-tight">Photos</h2>
-          <RoomEditDialog
-            room={room}
-            images={roomImages ?? []}
-            fields={['image']}
-            title="Manage photos"
-            trigger={
-              <Button variant="outline" size="sm">
-                <Pencil className="mr-1 h-4 w-4" />
-                Manage photos
-              </Button>
-            }
-          />
-        </div>
-        {(roomImages ?? []).length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No photos yet. Add photos to showcase this room.
-          </p>
-        ) : (
-          <PhotoGallery photos={roomImages ?? []} className="py-6" />
-        )}
-      </section>
-
-      <SectionNav sections={navSections} />
 
       <HostPageShell
         propertyId={property.id}
@@ -173,14 +105,56 @@ export default async function RoomProfilePage({
         defaultSelectedRoomIds={[room.id]}
         lockRoomSelection
         preselectedRoomIds={[room.id]}
-        className="mt-6"
+        className="mt-3"
+        leading={
+          <>
+            <RoomHero room={room} />
+
+            <ReturnToHouseCard
+              href={`/dashboard/${slug}/overview`}
+              houseName={property.name}
+              houseImageUrl={property.hero_image_url}
+              label="Back to home"
+              className="mt-6"
+            />
+
+            <section id="photos" className="scroll-mt-28 pt-6">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-[22px] font-semibold tracking-tight">
+                  Photos
+                </h2>
+                <RoomEditDialog
+                  room={room}
+                  images={roomImages ?? []}
+                  fields={['image']}
+                  title="Manage photos"
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <Pencil className="mr-1 h-4 w-4" />
+                      Manage photos
+                    </Button>
+                  }
+                />
+              </div>
+              {(roomImages ?? []).length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  No photos yet. Add photos to showcase this room.
+                </p>
+              ) : (
+                <PhotoGallery photos={roomImages ?? []} className="py-6" />
+              )}
+            </section>
+
+            <SectionNav sections={navSections} className="top-14 mt-2" />
+          </>
+        }
       >
-      {/* Description */}
-      <section id="about" className="scroll-mt-28 py-10 first:pt-0">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-[22px] font-semibold tracking-tight">
-            About this room
-          </h2>
+      <RoomAboutSection
+        room={room}
+        showEmpty
+        className="scroll-mt-28"
+        headingClassName="text-[22px]"
+        action={
           <RoomEditDialog
             room={room}
             fields={['description']}
@@ -191,24 +165,16 @@ export default async function RoomProfilePage({
               </Button>
             }
           />
-        </div>
-        {room.description ? (
-          <p className="mt-4 whitespace-pre-wrap leading-relaxed text-foreground/90">
-            {room.description}
-          </p>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No description yet. Add one to tell guests about this room.
-          </p>
-        )}
-      </section>
+        }
+      />
 
-      {/* Where guests sleep */}
-      <section id="sleeping" className="scroll-mt-28 py-10">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-[22px] font-semibold tracking-tight">
-            Where guests sleep
-          </h2>
+      <RoomBedsSection
+        room={room}
+        showEmpty
+        heading="Where guests sleep"
+        className="scroll-mt-28"
+        headingClassName="text-[22px]"
+        action={
           <RoomEditDialog
             room={room}
             fields={['beds']}
@@ -219,23 +185,15 @@ export default async function RoomProfilePage({
               </Button>
             }
           />
-        </div>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {room.beds.map((bed: string, i: number) => (
-            <div key={i} className="rounded-xl border p-4">
-              <BedDouble className="h-7 w-7" strokeWidth={1.5} />
-              <p className="mt-3 font-medium">{bedLabel(bed)} bed</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        }
+      />
 
-      {/* What this room offers */}
-      <section id="amenities" className="scroll-mt-28 py-10">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-[22px] font-semibold tracking-tight">
-            What this room offers
-          </h2>
+      <RoomAmenitiesSection
+        room={room}
+        showEmpty
+        className="scroll-mt-28"
+        headingClassName="text-[22px]"
+        action={
           <RoomEditDialog
             room={room}
             fields={['amenities']}
@@ -246,35 +204,8 @@ export default async function RoomProfilePage({
               </Button>
             }
           />
-        </div>
-        {room.amenities && room.amenities.length > 0 ? (
-          <ul className="mt-6 grid gap-x-10 gap-y-4 sm:grid-cols-2">
-            {room.amenities.map((a: Amenity) => (
-              <li
-                key={a.key}
-                className="flex items-start gap-4 border-b border-border/60 pb-4"
-              >
-                <Check
-                  className="mt-0.5 h-5 w-5 shrink-0 text-foreground"
-                  strokeWidth={1.5}
-                />
-                <span>
-                  {a.label}
-                  {a.note ? (
-                    <span className="block text-sm text-muted-foreground">
-                      {a.note}
-                    </span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-6 text-sm text-muted-foreground">
-            No amenities listed for this room yet.
-          </p>
-        )}
-      </section>
+        }
+      />
 
       <HostCalendarSection
         slug={slug}
