@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   getInvitationByToken,
@@ -14,6 +13,7 @@ import { getAuthUser } from '@/lib/auth';
 import { getInvitationRoomAvailability } from '@/lib/guest-availability';
 import { formatDateRange, formatDate } from '@/lib/dates';
 import { PropertySections } from '@/components/property-sections';
+import { PropertyNotesDisplay } from '@/components/property-notes-display';
 import { DirectionsDialog } from '@/components/directions-dialog';
 import { SiteFooter } from '@/components/site-footer';
 import { BookingProvider } from '@/components/guest/booking-context';
@@ -34,7 +34,7 @@ import {
   INVITATION_TYPE_HEADLINE_PHRASE,
   INVITATION_TYPE_LABELS,
 } from '@/lib/invitation-types';
-import { PhotoGallery } from '@/components/photo-gallery';
+import { PhotoMosaic } from '@/components/photo-gallery';
 
 export async function generateMetadata({
   params,
@@ -163,33 +163,9 @@ export default async function InvitePage({
           </DirectionsDialog>
         )}
 
-        {/* House card */}
-        <div className="relative flex h-72 w-full flex-col justify-end overflow-hidden rounded-2xl sm:h-96">
-          {property.hero_image_url ? (
-            <>
-              <Image
-                src={property.hero_image_url}
-                alt={property.name}
-                fill
-                className="object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
-            </>
-          ) : (
-            <div className="absolute inset-0 bg-linear-to-br from-slate-700 via-slate-800 to-slate-950" />
-          )}
-          <div className="relative p-8">
-            <p className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {property.name}
-            </p>
-          </div>
-        </div>
-
-        <PhotoGallery
+        <PhotoMosaic
           photos={property.property_images ?? []}
-          title="Photos"
-          className="py-6"
+          className="mb-6"
         />
 
         <BookingProvider
@@ -233,6 +209,12 @@ export default async function InvitePage({
                   &ldquo;{invitation.message}&rdquo;
                 </blockquote>
               )}
+
+              <PropertyNotesDisplay
+                notes={property.property_notes ?? []}
+                categories={['house']}
+                className="divide-y"
+              />
 
               <div className="mt-2 divide-y">
               {/* Available dates */}
@@ -295,7 +277,10 @@ export default async function InvitePage({
                 </div>
               </section>
 
-              <PropertySections property={property} />
+              <PropertySections
+                property={property}
+                showWifi={existingStay?.status === 'approved'}
+              />
 
               {/* Who's staying */}
               <section className="py-10">

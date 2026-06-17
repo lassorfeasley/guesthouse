@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CancelBookingButton } from '@/components/guest/cancel-booking-button';
 import { AddToCalendarButton } from '@/components/add-to-calendar-button';
-import type { BookingStatus } from '@/types/database';
+import { PropertyNotesDisplay } from '@/components/property-notes-display';
+import type { BookingStatus, PropertyNote } from '@/types/database';
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   requested: 'secondary',
@@ -23,7 +24,11 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 export interface TripBooking {
   id: string;
   status: BookingStatus;
-  property: { name: string; slug: string } | null;
+  property: {
+    name: string;
+    slug: string;
+    property_notes?: PropertyNote[];
+  } | null;
   dates:
     | { check_in: string; check_out: string }
     | { check_in: string; check_out: string }[]
@@ -121,6 +126,16 @@ export function TripsView({ bookings }: { bookings: TripBooking[] }) {
                     Rooms: {rooms.join(', ')}
                   </p>
                 )}
+                {booking.status === 'approved' &&
+                  booking.property?.property_notes &&
+                  booking.property.property_notes.length > 0 && (
+                    <PropertyNotesDisplay
+                      notes={booking.property.property_notes}
+                      categories={['house', 'checkin', 'checkout']}
+                      headingAs="h3"
+                      className="border-t pt-4"
+                    />
+                  )}
                 <div className="flex flex-wrap gap-2">
                   {booking.status === 'approved' && (
                     <AddToCalendarButton bookingId={booking.id} />

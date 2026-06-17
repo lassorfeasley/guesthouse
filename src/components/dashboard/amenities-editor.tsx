@@ -1,24 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Check, Plus, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { amenityKey } from '@/lib/amenities';
+import { AmenityPills } from '@/components/dashboard/amenity-pills';
 import type { Amenity } from '@/types/database';
 
 interface AmenitiesEditorProps {
@@ -34,29 +19,6 @@ export function AmenitiesEditor({
   presets,
   notePlaceholder = 'Add a note (optional)',
 }: AmenitiesEditorProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-
-  const selectedKeys = useMemo(
-    () => new Set(value.map((a) => a.key)),
-    [value]
-  );
-
-  const trimmed = search.trim();
-  const exactMatch = presets.some(
-    (p) => p.toLowerCase() === trimmed.toLowerCase()
-  );
-
-  function addAmenity(label: string) {
-    const key = amenityKey(label);
-    if (!key || selectedKeys.has(key)) {
-      setSearch('');
-      return;
-    }
-    onChange([...value, { key, label: label.trim(), note: '' }]);
-    setSearch('');
-  }
-
   function removeAmenity(key: string) {
     onChange(value.filter((a) => a.key !== key));
   }
@@ -66,9 +28,11 @@ export function AmenitiesEditor({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <AmenityPills value={value} onChange={onChange} presets={presets} />
+
       {value.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="space-y-2 border-t pt-4">
           {value.map((amenity) => (
             <li
               key={amenity.key}
@@ -96,71 +60,6 @@ export function AmenitiesEditor({
           ))}
         </ul>
       )}
-
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
-            <Plus className="mr-1 h-4 w-4" />
-            Add amenity
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-72 p-0" align="start">
-          <Command>
-            <CommandInput
-              placeholder="Search or type a custom amenity…"
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandList>
-              <CommandEmpty>
-                {trimmed ? (
-                  <button
-                    type="button"
-                    className="mx-auto flex items-center gap-1 text-sm text-foreground hover:underline"
-                    onClick={() => addAmenity(trimmed)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add &ldquo;{trimmed}&rdquo;
-                  </button>
-                ) : (
-                  'No amenities found.'
-                )}
-              </CommandEmpty>
-              <CommandGroup heading="Suggestions">
-                {presets.map((preset) => {
-                  const key = amenityKey(preset);
-                  const isSelected = selectedKeys.has(key);
-                  return (
-                    <CommandItem
-                      key={key}
-                      value={preset}
-                      onSelect={() => addAmenity(preset)}
-                      disabled={isSelected}
-                    >
-                      <Check
-                        className={cn(
-                          'h-4 w-4',
-                          isSelected ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      {preset}
-                    </CommandItem>
-                  );
-                })}
-                {trimmed && !exactMatch && (
-                  <CommandItem
-                    value={`__add__${trimmed}`}
-                    onSelect={() => addAmenity(trimmed)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add &ldquo;{trimmed}&rdquo;
-                  </CommandItem>
-                )}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }

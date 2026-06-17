@@ -39,13 +39,41 @@ export const amenitySchema = z.object({
 });
 export type AmenityInput = z.infer<typeof amenitySchema>;
 
+export const PROPERTY_DESCRIPTION_MAX_LENGTH = 1000;
+export const PROPERTY_NOTE_MAX_LENGTH = 200;
+export const PROPERTY_NOTES_MAX_PER_CATEGORY = 5;
+
+export const propertyNoteCategorySchema = z.enum(['house', 'checkin', 'checkout']);
+
+export const propertyNoteBodySchema = z
+  .string()
+  .trim()
+  .min(1, 'Note cannot be empty')
+  .max(
+    PROPERTY_NOTE_MAX_LENGTH,
+    `Note must be ${PROPERTY_NOTE_MAX_LENGTH} characters or fewer`
+  );
+
+export const propertyNoteSchema = z.object({
+  category: propertyNoteCategorySchema,
+  body: propertyNoteBodySchema,
+});
+
+export type PropertyNoteInput = z.infer<typeof propertyNoteSchema>;
+
 export const propertySchema = z.object({
   name: z.string().min(1, 'Property name is required'),
   slug: z
     .string()
     .min(1)
     .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens'),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(
+      PROPERTY_DESCRIPTION_MAX_LENGTH,
+      `Description must be ${PROPERTY_DESCRIPTION_MAX_LENGTH} characters or fewer`
+    )
+    .optional(),
   address: z.string().optional(),
   directions: z.string().optional(),
   wifi_name: z.string().optional(),

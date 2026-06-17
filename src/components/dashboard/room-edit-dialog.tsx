@@ -42,6 +42,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { AmenitiesEditor } from '@/components/dashboard/amenities-editor';
 import { ROOM_AMENITY_PRESETS } from '@/lib/amenities';
 import { PhotoManager } from '@/components/dashboard/photo-manager';
+import { DeleteRoomConfirm } from '@/components/dashboard/delete-room-button';
 import type { Room, RoomImage } from '@/types/database';
 
 type BedSize = (typeof BED_SIZES)[number];
@@ -70,6 +71,8 @@ interface RoomEditDialogProps {
   propertyId?: string;
   /** display_order to assign a newly created room. */
   displayOrder?: number;
+  /** When editing an existing room, enables delete with redirect after removal. */
+  deleteRedirectTo?: string;
   fields: RoomEditField[];
   title: string;
   trigger: ReactNode;
@@ -93,6 +96,7 @@ export function RoomEditDialog({
   images = [],
   propertyId,
   displayOrder,
+  deleteRedirectTo,
   fields,
   title,
   trigger,
@@ -101,6 +105,7 @@ export function RoomEditDialog({
   const isCreate = !room;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleteResetKey, setDeleteResetKey] = useState(0);
 
   const form = useForm<RoomInput>({
     resolver: zodResolver(roomSchema),
@@ -113,7 +118,10 @@ export function RoomEditDialog({
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
-    if (next) form.reset(room ? toFormValues(room) : EMPTY_VALUES);
+    if (next) {
+      form.reset(room ? toFormValues(room) : EMPTY_VALUES);
+      setDeleteResetKey((k) => k + 1);
+    }
   }
 
   function addBed() {
@@ -310,6 +318,18 @@ export function RoomEditDialog({
                   ? 'Add room'
                   : 'Save changes'}
             </Button>
+
+            {room && deleteRedirectTo && (
+              <div className="border-t pt-6">
+                <DeleteRoomConfirm
+                  key={deleteResetKey}
+                  roomId={room.id}
+                  roomName={room.name}
+                  redirectTo={deleteRedirectTo}
+                  onDeleted={() => setOpen(false)}
+                />
+              </div>
+            )}
           </form>
         </Form>
       </DialogContent>

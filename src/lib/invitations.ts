@@ -23,7 +23,7 @@ export const getInvitationByToken = cache(async function getInvitationByToken(
     .select(
       `
       *,
-      property:properties(*, property_images(*), owner:users!owner_id(first_name, last_name, email)),
+      property:properties(*, property_images(*), property_notes(*), owner:users!owner_id(first_name, last_name, email)),
       invitation_rooms(room:rooms(*, room_images(*))),
       invitation_windows(*)
     `
@@ -48,6 +48,7 @@ export const getInvitationByToken = cache(async function getInvitationByToken(
 
   const property = invitation.property as import('@/types/database').Property;
   const propertyImages = property.property_images ?? [];
+  const propertyNotes = property.property_notes ?? [];
 
   const rooms =
     invitation.invitation_rooms?.map(
@@ -59,6 +60,7 @@ export const getInvitationByToken = cache(async function getInvitationByToken(
     property: {
       ...property,
       property_images: propertyImages,
+      property_notes: propertyNotes,
     },
     rooms: rooms.sort(
       (a: { display_order: number }, b: { display_order: number }) =>

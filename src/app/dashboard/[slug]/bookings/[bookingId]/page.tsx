@@ -114,7 +114,10 @@ export default async function ManageBookingPage({
         guestProfileHref={guestProfileHref}
         bookingHrefBase={`/dashboard/${slug}/bookings`}
       >
-        <PropertySections property={property} />
+        <PropertySections
+          property={property}
+          noteCategories={['house', 'checkin', 'checkout']}
+        />
       </BookingManageView>
     </DashboardContainer>
   );

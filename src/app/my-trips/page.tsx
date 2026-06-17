@@ -26,7 +26,7 @@ export default async function MyTripsPage() {
     .select(
       `
       *,
-      property:properties(name, slug),
+      property:properties(name, slug, checkout_time, property_notes(*)),
       dates:booking_dates(check_in, check_out),
       booking_rooms(room:rooms(name)),
       invitation:invitations(token)

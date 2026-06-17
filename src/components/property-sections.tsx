@@ -1,15 +1,27 @@
 import { Check, Navigation } from 'lucide-react';
 import { PropertyMap } from '@/components/dashboard/property-map';
 import { DirectionsDialog } from '@/components/directions-dialog';
+import { PropertyNotesDisplay } from '@/components/property-notes-display';
 import { Button } from '@/components/ui/button';
-import type { Property } from '@/types/database';
+import type { Property, PropertyNoteCategory } from '@/types/database';
 
 /**
  * Read-only property detail sections (About / Location / Amenities / Guest info)
  * shared by the guest invite page and the host manage-booking view. Each section
  * is hidden when its data is empty.
  */
-export function PropertySections({ property }: { property: Property }) {
+export function PropertySections({
+  property,
+  noteCategories,
+  showWifi = false,
+}: {
+  property: Property;
+  noteCategories?: PropertyNoteCategory[];
+  /** WiFi and other access details — only after a stay is approved. */
+  showWifi?: boolean;
+}) {
+  const notes = property.property_notes ?? [];
+
   return (
     <>
       {property.description && (
@@ -87,42 +99,19 @@ export function PropertySections({ property }: { property: Property }) {
         </section>
       )}
 
-      {(property.wifi_name ||
-        property.check_in_instructions ||
-        property.house_rules) && (
+      {noteCategories && noteCategories.length > 0 && (
+        <PropertyNotesDisplay notes={notes} categories={noteCategories} />
+      )}
+
+      {showWifi && property.wifi_name && (
         <section className="py-10">
           <h2 className="text-2xl font-semibold tracking-tight">
-            Guest information
+            WiFi
           </h2>
-          <dl className="mt-8 grid gap-8 sm:grid-cols-2">
-            {property.check_in_instructions && (
-              <div>
-                <dt className="text-base font-medium">Check-in instructions</dt>
-                <dd className="mt-2 whitespace-pre-wrap text-base text-muted-foreground">
-                  {property.check_in_instructions}
-                </dd>
-              </div>
-            )}
-            {property.wifi_name && (
-              <div>
-                <dt className="text-base font-medium">WiFi</dt>
-                <dd className="mt-2 text-base text-muted-foreground">
-                  {property.wifi_name}
-                  {property.wifi_password
-                    ? ` · ${property.wifi_password}`
-                    : ''}
-                </dd>
-              </div>
-            )}
-            {property.house_rules && (
-              <div>
-                <dt className="text-base font-medium">House rules</dt>
-                <dd className="mt-2 whitespace-pre-wrap text-base text-muted-foreground">
-                  {property.house_rules}
-                </dd>
-              </div>
-            )}
-          </dl>
+          <p className="mt-6 text-base text-muted-foreground">
+            {property.wifi_name}
+            {property.wifi_password ? ` · ${property.wifi_password}` : ''}
+          </p>
         </section>
       )}
     </>

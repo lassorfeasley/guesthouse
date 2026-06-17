@@ -45,6 +45,18 @@ export interface Amenity {
   note: string;
 }
 
+export type PropertyNoteCategory = 'house' | 'checkin' | 'checkout';
+
+export interface PropertyNote {
+  id: string;
+  property_id: string;
+  category: PropertyNoteCategory;
+  body: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Property {
   id: string;
   owner_id: string;
@@ -66,6 +78,7 @@ export interface Property {
   amenities: Amenity[];
   created_at: string;
   property_images?: PropertyImage[];
+  property_notes?: PropertyNote[];
 }
 
 export interface PropertyManager {

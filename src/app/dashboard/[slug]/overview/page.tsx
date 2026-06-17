@@ -12,12 +12,13 @@ import { HostCalendarSection } from '@/components/dashboard/host-calendar-sectio
 import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import { RoomEditDialog } from '@/components/dashboard/room-edit-dialog';
 import { PropertyEditDialog } from '@/components/dashboard/property-edit-dialog';
+import { GuestInformationSection } from '@/components/dashboard/guest-information-section';
 import { PropertyMap } from '@/components/dashboard/property-map';
 import { SectionNav } from '@/components/dashboard/section-nav';
-import { PhotoGallery } from '@/components/photo-gallery';
+import { PhotoMosaic } from '@/components/photo-gallery';
 import { Pencil, Plus, MapPin, Check } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import type { PropertyNote } from '@/types/database';
 
 export const metadata = { title: 'Overview' };
 
@@ -55,6 +56,14 @@ export default async function OverviewPage({
     .select('*')
     .eq('property_id', property.id)
     .order('display_order');
+
+  const { data: propertyNotes } = await supabase
+    .from('property_notes')
+    .select('*')
+    .eq('property_id', property.id)
+    .order('display_order');
+
+  const notes = (propertyNotes ?? []) as PropertyNote[];
 
   const { data: bookings } = await supabase
     .from('bookings')
@@ -117,6 +126,16 @@ export default async function OverviewPage({
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {property.name}
           </h1>
+          {property.address && (
+            <p className="mt-2 flex items-center gap-1.5 text-base text-muted-foreground">
+              <MapPin className="h-4 w-4 shrink-0" />
+              {property.address}
+            </p>
+          )}
+          <p className="mt-1 text-base text-muted-foreground">
+            {roomCount} {roomCount === 1 ? 'room' : 'rooms'}
+            {totalGuests > 0 ? ` · sleeps ${totalGuests}` : ''}
+          </p>
         </div>
         <ComposePageActions
           propertyId={property.id}
@@ -125,53 +144,29 @@ export default async function OverviewPage({
         />
       </div>
 
-      {/* House card */}
-      <div className="relative mt-8 flex h-72 w-full flex-col justify-end overflow-hidden rounded-2xl sm:h-96">
-        {property.hero_image_url ? (
-          <>
-            <Image
-              src={property.hero_image_url}
-              alt={property.name}
-              fill
-              className="object-cover"
-              priority
-            />
-            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-linear-to-br from-slate-700 via-slate-800 to-slate-950" />
-        )}
-        <div className="absolute right-4 top-4">
+      <PhotoMosaic
+        photos={propertyImages ?? []}
+        className="mt-6"
+        emptyState={
+          <p className="text-sm text-muted-foreground">
+            Add photos to showcase your place
+          </p>
+        }
+        manageAction={
           <PropertyEditDialog
             property={property}
             images={propertyImages ?? []}
             fields={['image']}
-            title="Edit photos"
+            title="Manage photos"
             trigger={
-              <Button variant="secondary" size="icon" aria-label="Edit photos">
-                <Pencil className="h-4 w-4" />
+              <Button variant="secondary" size="sm" className="shadow-md">
+                <Pencil className="mr-1 h-4 w-4" />
+                Manage photos
               </Button>
             }
           />
-        </div>
-        <div className="relative p-8">
-          <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            {property.name}
-          </h2>
-          {property.address && (
-            <p className="mt-2 flex items-center gap-1.5 text-base text-white/80">
-              <MapPin className="h-4 w-4" />
-              {property.address}
-            </p>
-          )}
-          <p className="mt-2 text-base text-white/70">
-            {roomCount} {roomCount === 1 ? 'room' : 'rooms'}
-            {totalGuests > 0 ? ` · sleeps ${totalGuests}` : ''}
-          </p>
-        </div>
-      </div>
-
-      <PhotoGallery photos={propertyImages ?? []} title="Photos" className="py-6" />
+        }
+      />
 
       <SectionNav sections={navSections} />
 
@@ -360,66 +355,7 @@ export default async function OverviewPage({
         )}
       </section>
 
-      {/* Guest information */}
-      <section id="guest-info" className="scroll-mt-28 py-10">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Guest information
-          </h2>
-          <PropertyEditDialog
-            property={property}
-            fields={[
-              'check_in_instructions',
-              'checkout_instructions',
-              'checkout_time',
-              'wifi',
-              'house_rules',
-            ]}
-            title="Edit guest information"
-            trigger={
-              <Button variant="ghost" size="icon" aria-label="Edit guest information">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            }
-          />
-        </div>
-        <dl className="mt-8 grid gap-8 sm:grid-cols-2">
-          <div>
-            <dt className="text-base font-medium">Check-in instructions</dt>
-            <dd className="mt-2 whitespace-pre-wrap text-base text-muted-foreground">
-              {property.check_in_instructions || 'Not set'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-base font-medium">
-              Checkout instructions
-              {property.checkout_time ? ` · ${property.checkout_time}` : ''}
-            </dt>
-            <dd className="mt-2 whitespace-pre-wrap text-base text-muted-foreground">
-              {property.checkout_instructions || 'Not set'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-base font-medium">WiFi</dt>
-            <dd className="mt-2 text-base text-muted-foreground">
-              {property.wifi_name ? (
-                <>
-                  {property.wifi_name}
-                  {property.wifi_password ? ` · ${property.wifi_password}` : ''}
-                </>
-              ) : (
-                'Not set'
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-base font-medium">House rules</dt>
-            <dd className="mt-2 whitespace-pre-wrap text-base text-muted-foreground">
-              {property.house_rules || 'Not set'}
-            </dd>
-          </div>
-        </dl>
-      </section>
+      <GuestInformationSection property={property} notes={notes} />
 
       {/* Upcoming stays */}
       <section id="upcoming" className="scroll-mt-28 py-10">

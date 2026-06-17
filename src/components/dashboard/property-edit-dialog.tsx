@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { propertySchema, type PropertyInput } from '@/lib/validations';
+import { propertySchema, PROPERTY_DESCRIPTION_MAX_LENGTH, type PropertyInput } from '@/lib/validations';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,8 +171,15 @@ export function PropertyEditDialog({
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea rows={5} {...field} />
+                      <Textarea
+                        rows={5}
+                        maxLength={PROPERTY_DESCRIPTION_MAX_LENGTH}
+                        {...field}
+                      />
                     </FormControl>
+                    <p className="text-right text-xs text-muted-foreground">
+                      {(field.value ?? '').length}/{PROPERTY_DESCRIPTION_MAX_LENGTH}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

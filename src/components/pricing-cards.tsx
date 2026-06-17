@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -13,8 +12,8 @@ export function PricingCards({ className }: { className?: string }) {
               Your first two stays are on the house
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              No card to begin. Make the house ready and welcome your first
-              guests.
+              Get to know gracious by setting up your account and sending your
+              first two invitations free.
             </p>
           </div>
 
@@ -40,18 +39,6 @@ export function PricingCards({ className }: { className?: string }) {
             <Button asChild size="lg" className="mt-5 w-full">
               <Link href="/signup">Get started</Link>
             </Button>
-
-            <Link
-              href="/signup?upgrade=pro&interval=annual"
-              className="mt-3 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
-            >
-              Or take the year now &rarr;
-            </Link>
-
-            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground lg:justify-start">
-              <Check className="size-4 shrink-0 text-success" />
-              Every stay, every home &middot; Your guests never pay
-            </p>
           </div>
         </div>
       </div>

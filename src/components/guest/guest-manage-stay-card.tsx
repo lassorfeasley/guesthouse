@@ -68,8 +68,8 @@ export function GuestManageStayCard({
 
       {bookingStatus === 'approved' && (
         <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-          You&apos;re confirmed for this stay. Check guest information below for
-          WiFi and check-in details.
+          You&apos;re confirmed for this stay. See your trip details below for
+          arrival and checkout notes.
         </p>
       )}
 

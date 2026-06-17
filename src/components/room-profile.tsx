@@ -153,35 +153,18 @@ function RoomSectionHeading({
 export function RoomHero({
   room,
   className,
-  priority = true,
 }: {
   room: RoomProfileData;
   className?: string;
-  priority?: boolean;
 }) {
   return (
     <div className={className}>
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {room.name}
-        </h1>
-        <p className="mt-2 text-base text-muted-foreground">
-          Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-        </p>
-      </div>
-      {room.image_url ? (
-        <div className="relative mt-6 h-64 w-full overflow-hidden rounded-2xl sm:h-80">
-          <Image
-            src={room.image_url}
-            alt={room.name}
-            fill
-            className="object-cover"
-            priority={priority}
-          />
-        </div>
-      ) : (
-        <div className="relative mt-6 h-64 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-80" />
-      )}
+      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        {room.name}
+      </h1>
+      <p className="mt-2 text-base text-muted-foreground">
+        Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
+      </p>
     </div>
   );
 }

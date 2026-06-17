@@ -46,7 +46,7 @@ export async function getBookingWithDetails(
       guest:users!guest_user_id(*),
       dates:booking_dates(*),
       booking_rooms(room:rooms(*)),
-      property:properties(*),
+      property:properties(*, property_notes(*)),
       invitation:invitations(*)
     `
     )

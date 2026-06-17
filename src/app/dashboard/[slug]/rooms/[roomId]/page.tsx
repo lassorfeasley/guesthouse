@@ -12,8 +12,7 @@ import { PropertyMap } from '@/components/dashboard/property-map';
 import { SectionNav } from '@/components/dashboard/section-nav';
 import { InviteGuestDialog } from '@/components/dashboard/invite-guest-dialog';
 import { RoomEditDialog } from '@/components/dashboard/room-edit-dialog';
-import { DeleteRoomButton } from '@/components/dashboard/delete-room-button';
-import { PhotoGallery } from '@/components/photo-gallery';
+import { PhotoMosaic } from '@/components/photo-gallery';
 import { Button } from '@/components/ui/button';
 import {
   RoomHero,
@@ -76,6 +75,7 @@ export default async function RoomProfilePage({
         room={room}
         images={roomImages ?? []}
         fields={['name', 'max_occupancy', 'image']}
+        deleteRedirectTo={`/dashboard/${slug}/overview`}
         title="Edit room details"
         trigger={
           <Button variant="outline" size="icon" aria-label="Edit">
@@ -123,7 +123,32 @@ export default async function RoomProfilePage({
         invitationUsage={invitationUsage}
         leading={
           <>
-            <RoomHero room={room} />
+            <section id="photos" className="scroll-mt-28">
+              <PhotoMosaic
+                photos={roomImages ?? []}
+                emptyState={
+                  <p className="text-sm text-muted-foreground">
+                    Add photos to showcase this room
+                  </p>
+                }
+                manageAction={
+                  <RoomEditDialog
+                    room={room}
+                    images={roomImages ?? []}
+                    fields={['image']}
+                    title="Manage photos"
+                    trigger={
+                      <Button variant="secondary" size="sm" className="shadow-md">
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Manage photos
+                      </Button>
+                    }
+                  />
+                }
+              />
+            </section>
+
+            <RoomHero room={room} className="mt-6" />
 
             <ReturnToHouseCard
               href={`/dashboard/${slug}/overview`}
@@ -133,34 +158,7 @@ export default async function RoomProfilePage({
               className="mt-6"
             />
 
-            <section id="photos" className="scroll-mt-28 pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-[22px] font-semibold tracking-tight">
-                  Photos
-                </h2>
-                <RoomEditDialog
-                  room={room}
-                  images={roomImages ?? []}
-                  fields={['image']}
-                  title="Manage photos"
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <Pencil className="mr-1 h-4 w-4" />
-                      Manage photos
-                    </Button>
-                  }
-                />
-              </div>
-              {(roomImages ?? []).length === 0 ? (
-                <p className="mt-4 text-sm text-muted-foreground">
-                  No photos yet. Add photos to showcase this room.
-                </p>
-              ) : (
-                <PhotoGallery photos={roomImages ?? []} className="py-6" />
-              )}
-            </section>
-
-            <SectionNav sections={navSections} className="top-14 mt-2" />
+            <SectionNav sections={navSections} className="top-14 mt-6" />
           </>
         }
       >
@@ -249,27 +247,6 @@ export default async function RoomProfilePage({
         </section>
       )}
 
-      {/* Danger zone */}
-      <section className="py-10">
-        <h2 className="text-[22px] font-semibold tracking-tight text-destructive">
-          Danger zone
-        </h2>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-destructive/40 p-4">
-          <div>
-            <p className="font-medium">Delete this room</p>
-            <p className="text-sm text-muted-foreground">
-              Permanently remove {room.name}. This can&apos;t be undone and may
-              affect existing bookings.
-            </p>
-          </div>
-          <DeleteRoomButton
-            roomId={room.id}
-            roomName={room.name}
-            redirectTo={`/dashboard/${slug}/overview`}
-            withLabel
-          />
-        </div>
-      </section>
       </HostPageShell>
     </DashboardContainer>
   );
