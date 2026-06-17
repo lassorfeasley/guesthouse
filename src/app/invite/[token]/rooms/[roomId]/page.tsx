@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, BedDouble, Check, Navigation } from 'lucide-react';
+import { ArrowLeft, BedDouble, Check, ChevronRight, Home } from 'lucide-react';
 import {
   getInvitationByToken,
   isInvitationActive,
@@ -12,9 +12,6 @@ import { getGuestStayForInvitation } from '@/lib/bookings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assignColors } from '@/lib/calendar-colors';
 import { summarizeBeds, BED_SIZE_LABELS } from '@/lib/validations';
-import { PropertyMap } from '@/components/dashboard/property-map';
-import { DirectionsDialog } from '@/components/directions-dialog';
-import { Button } from '@/components/ui/button';
 import { SectionNav } from '@/components/dashboard/section-nav';
 import { SiteFooter } from '@/components/site-footer';
 import { BookingProvider } from '@/components/guest/booking-context';
@@ -79,6 +76,14 @@ export default async function GuestRoomPage({
     !!authUser && authUser.email === invitation.guest_email;
   const property = invitation.property;
 
+  const houseHref = previewMode
+    ? appendGuestPreviewToPath(
+        `/invite/${invitation.token}`,
+        guestPreviewAs,
+        guestPreviewBookingStatus
+      )
+    : `/invite/${invitation.token}`;
+
   const existingStay =
     isAuthenticated && authUser
       ? await getGuestStayForInvitation(invitation.id, authUser.id)
@@ -139,80 +144,111 @@ export default async function GuestRoomPage({
     ...(showBookingCalendar
       ? [{ id: 'availability', label: 'Availability' }]
       : []),
-    ...(property.address ? [{ id: 'location', label: 'Location' }] : []),
   ];
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto w-full max-w-6xl px-6 pt-6 pb-24">
-        <Link
-          href={
-            previewMode
-              ? appendGuestPreviewToPath(
-                  `/invite/${invitation.token}`,
-                  guestPreviewAs,
-                  guestPreviewBookingStatus
-                )
-              : `/invite/${invitation.token}`
-          }
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      {/* Breadcrumb */}
+      <div className="border-b">
+        <nav
+          aria-label="Breadcrumb"
+          className="mx-auto flex w-full max-w-6xl items-center gap-1.5 px-6 py-3 text-sm"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Link>
+          <Link
+            href={houseHref}
+            className="inline-flex min-w-0 items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" />
+            <span className="truncate">{property.name}</span>
+          </Link>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+          <span className="truncate font-medium text-foreground">
+            {room.name}
+          </span>
+        </nav>
+      </div>
 
-        {/* Hero card */}
-        {room.image_url ? (
-          <>
-            <div className="mt-4">
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                {room.name}
-              </h1>
-              <p className="mt-2 text-base text-muted-foreground">
-                Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-              </p>
-            </div>
-            <div className="relative mt-6 h-72 w-full overflow-hidden rounded-2xl sm:h-[420px]">
-              <Image
-                src={room.image_url}
-                alt={room.name}
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-          </>
-        ) : (
-          <div className="relative mt-4 flex h-72 w-full flex-col justify-end overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 p-6 sm:h-[420px]">
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {room.name}
-            </h1>
-            <p className="mt-2 text-base text-white/70">
-              Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
-            </p>
-          </div>
-        )}
-
-        <PhotoGallery
-          photos={room.room_images ?? []}
-          title="Photos"
-          className="py-6"
-        />
-
-        <SectionNav
-          sections={navSections}
-          className="top-0 mt-8"
-          scrollOffset={80}
-        />
-
+      <div className="mx-auto w-full max-w-6xl px-6 pt-6 pb-24">
         <BookingProvider
           defaultRange={defaultRange}
           defaultGuests={1}
           maxGuestsCap={room.max_occupancy}
         >
-          <div className="mt-6 grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
+          <div className="grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
             {/* Left column */}
-            <div className="min-w-0 divide-y">
+            <div className="min-w-0">
+              {/* Title */}
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  {room.name}
+                </h1>
+                <p className="mt-2 text-base text-muted-foreground">
+                  Up to {room.max_occupancy} guests · {summarizeBeds(room.beds)}
+                </p>
+              </div>
+
+              {/* Hero photo banner — first card in the left column */}
+              {room.image_url ? (
+                <div className="relative mt-6 h-64 w-full overflow-hidden rounded-2xl sm:h-80">
+                  <Image
+                    src={room.image_url}
+                    alt={room.name}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              ) : (
+                <div className="relative mt-6 h-64 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-80" />
+              )}
+
+              {/* Persistent return-to-house card */}
+              <Link
+                href={houseHref}
+                className="group mt-6 flex items-center gap-4 rounded-2xl border p-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+                  {property.hero_image_url ? (
+                    <Image
+                      src={property.hero_image_url}
+                      alt={property.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Home
+                        className="h-6 w-6 text-muted-foreground"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">
+                    You&apos;re viewing a room at
+                  </p>
+                  <p className="truncate font-medium">{property.name}</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-foreground">
+                  <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                  <span className="hidden sm:inline">Back to house</span>
+                </span>
+              </Link>
+
+              <PhotoGallery
+                photos={room.room_images ?? []}
+                title="Photos"
+                className="py-6"
+              />
+
+              <SectionNav
+                sections={navSections}
+                className="top-0 mt-2"
+                scrollOffset={100}
+              />
+
+              <div className="mt-2 divide-y">
               {room.description && (
                 <section id="about" className="scroll-mt-24 py-10 first:pt-0">
                   <h2 className="text-2xl font-semibold tracking-tight">
@@ -291,34 +327,7 @@ export default async function GuestRoomPage({
                   </div>
                 </section>
               )}
-
-              {/* Location */}
-              {property.address && (
-                <section id="location" className="scroll-mt-24 py-10 first:pt-0">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-2xl font-semibold tracking-tight">
-                      Where you&apos;re staying
-                    </h2>
-                    <DirectionsDialog
-                      address={property.address}
-                      latitude={property.latitude}
-                      longitude={property.longitude}
-                    >
-                      <Button variant="outline" size="sm">
-                        <Navigation />
-                        Directions
-                      </Button>
-                    </DirectionsDialog>
-                  </div>
-                  <div className="mt-6">
-                    <PropertyMap
-                      address={property.address}
-                      latitude={property.latitude}
-                      longitude={property.longitude}
-                    />
-                  </div>
-                </section>
-              )}
+              </div>
             </div>
 
             {/* Right column — booking sidebar */}
