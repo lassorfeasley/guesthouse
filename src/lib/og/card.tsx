@@ -1,5 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  WORDMARK_ASPECT,
+  WORDMARK_PATHS,
+  WORDMARK_VIEWBOX,
+} from '@/components/brand/wordmark';
 
 /**
  * Shared building blocks for Open Graph images (next/og ImageResponse).
@@ -11,6 +16,38 @@ export const OG_SIZE = { width: 1200, height: 630 };
 
 const GREEN = '#1f3d33'; // --primary
 const CREAM = '#faf8f4'; // --background
+
+/**
+ * Render the actual brand wordmark (outlined Fraunces) rather than re-typesetting
+ * the name in a different face — keeps OG cards on-brand. Satori reliably draws
+ * SVG via an <img> data URI, sized by height (width derived from the aspect).
+ */
+function wordmarkSrc(color: string): string {
+  const paths = WORDMARK_PATHS.map((d) => `<path d="${d}" fill="${color}"/>`).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${WORDMARK_VIEWBOX}">${paths}</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
+
+function Wordmark({
+  height,
+  color,
+  style,
+}: {
+  height: number;
+  color: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={wordmarkSrc(color)}
+      alt="Gracious"
+      width={Math.round(height * WORDMARK_ASPECT)}
+      height={height}
+      style={style}
+    />
+  );
+}
 
 export async function loadOgFonts() {
   const dir = join(process.cwd(), 'src', 'lib', 'og');
@@ -39,16 +76,7 @@ export function BrandCard({ tagline }: { tagline?: string }) {
         color: CREAM,
       }}
     >
-      <div
-        style={{
-          fontFamily: 'Hanken Grotesk',
-          fontWeight: 700,
-          fontSize: 132,
-          letterSpacing: '-0.03em',
-        }}
-      >
-        Gracious
-      </div>
+      <Wordmark height={112} color={CREAM} />
       {tagline && (
         <div
           style={{
@@ -122,13 +150,10 @@ export function PhotoCard({
           position: 'absolute',
           top: 48,
           right: 64,
-          fontFamily: 'Hanken Grotesk',
-          fontWeight: 700,
-          fontSize: 34,
-          color: 'rgba(250, 248, 244, 0.92)',
+          display: 'flex',
         }}
       >
-        Gracious
+        <Wordmark height={36} color={CREAM} style={{ opacity: 0.92 }} />
       </div>
       <div
         style={{
