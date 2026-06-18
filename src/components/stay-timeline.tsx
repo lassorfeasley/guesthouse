@@ -63,19 +63,42 @@ interface StayTimelineProps {
   /** Width of the sticky row-label column, in px. */
   labelWidth?: number;
   /**
-   * Background utility for the sticky label column — must match the surface the
-   * timeline sits on so bands don't show through when scrolled. Defaults to the
-   * page background; pass `bg-card` inside a card.
+   * Wrap the timeline in a bordered, filled card so it reads as a distinct
+   * surface against the page. Defaults to true; the landing-page demo passes
+   * false because it supplies its own surrounding card.
    */
-  surfaceClassName?: string;
+  framed?: boolean;
+  /**
+   * When the timeline lives inside a caller-provided card (so `framed` is
+   * false), bleed the schedule and its bounding rules out to that card's edges.
+   * Assumes the parent card is padded `p-4 sm:p-6` (the landing showcase); the
+   * negative margins and label inset below cancel exactly that padding.
+   */
+  bleed?: boolean;
   /** Renders a legend of the stay variants present in `rows`. */
   showLegend?: boolean;
   /** Renders a month label band above the day columns. */
   showMonths?: boolean;
+  /** On mount, scroll so today is the first visible day column. */
+  startAtToday?: boolean;
+  /**
+   * Override the date treated as "today" (ISO yyyy-MM-dd) for the highlighted
+   * column. Defaults to the real current date; the landing demo pins it so the
+   * showcase stays visually stable regardless of when it's viewed.
+   */
+  today?: string;
   /** Message shown when there are no rows. */
   emptyLabel?: string;
   className?: string;
 }
+
+/*
+ * Frosted glass for the sticky label column: a translucent card fill plus a
+ * backdrop blur, so stays scrolling underneath stay faintly visible (their
+ * shape and color read through) rather than being hidden behind an opaque wall.
+ */
+const LABEL_SURFACE =
+  'bg-card/70 supports-[backdrop-filter]:bg-card/55 backdrop-blur-md';
 
 const STAY_CLASS: Record<TimelineStayVariant, string> = {
   confirmed: 'bg-primary text-primary-foreground',
@@ -96,8 +119,8 @@ const DOT_CLASS: Record<TimelineStayVariant, string> = {
 };
 
 const LEGEND: { variant: TimelineStayVariant; label: string }[] = [
-  { variant: 'confirmed', label: 'Confirmed stay' },
-  { variant: 'pending', label: 'Pending request' },
+  { variant: 'confirmed', label: 'Confirmed' },
+  { variant: 'pending', label: 'Pending' },
   { variant: 'blocked', label: 'Blocked' },
 ];
 
@@ -169,7 +192,14 @@ function StayBand({
 
   return (
     <div
-      style={{ gridColumnStart: placed.colStart, gridColumnEnd: placed.colEnd }}
+      style={{
+        gridColumnStart: placed.colStart,
+        gridColumnEnd: placed.colEnd,
+        // Keep every band on the single grid row; otherwise auto-placement can
+        // push some into an implicit second row and knock them out of vertical
+        // alignment with the room label.
+        gridRowStart: 1,
+      }}
       className="flex min-w-0 items-center px-0.5"
     >
       {stay.href ? (
@@ -192,16 +222,19 @@ export function StayTimeline({
   rowHeading = 'Guest rooms',
   dayWidth = 40,
   labelWidth = 112,
-  surfaceClassName = 'bg-background',
+  framed = true,
+  bleed = false,
   showLegend = false,
   showMonths = false,
+  startAtToday = false,
+  today: todayProp,
   emptyLabel = 'Nothing scheduled yet.',
   className,
 }: StayTimelineProps) {
   const startDay = startOfDay(parseISO(windowStart));
   const days = Array.from({ length: windowDays }, (_, i) => addDays(startDay, i));
   const windowEndDay = days[days.length - 1] ?? startDay;
-  const today = startOfDay(new Date());
+  const today = todayProp ? startOfDay(parseISO(todayProp)) : startOfDay(new Date());
   const trackWidth = windowDays * dayWidth;
   const gridCols = `repeat(${windowDays}, minmax(0, 1fr))`;
 
@@ -253,6 +286,21 @@ export function StayTimeline({
     };
   }, [updateScrollState, windowDays, rows.length]);
 
+  // Start the view with today as the first visible day column (host/portfolio
+  // schedules), so the most relevant dates are front-and-center on load.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !startAtToday) return;
+    const offsetDays = differenceInDays(today, startDay);
+    if (offsetDays <= 0) return;
+    const target = Math.min(offsetDays * dayWidth, el.scrollWidth - el.clientWidth);
+    el.scrollLeft = Math.max(0, target);
+    updateScrollState();
+    // today/startDay are derived from windowStart; re-run only when the window
+    // or sizing changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startAtToday, windowStart, windowDays, dayWidth, updateScrollState]);
+
   const scrollByPage = useCallback(
     (direction: -1 | 1) => {
       const el = scrollRef.current;
@@ -267,22 +315,45 @@ export function StayTimeline({
   );
 
   const showControls = canScrollLeft || canScrollRight;
+  // Negative margins that pull the scroll track out to the surrounding card's
+  // edges (cancelling its horizontal padding), plus the matching sticky-label
+  // inset so the label text stays clear of that edge. `framed` cancels this
+  // component's own px-2.5/sm:px-5; `bleed` cancels a parent card's p-4/sm:p-6.
+  const bleedX = framed
+    ? '-mx-2.5 sm:-mx-5'
+    : bleed
+      ? '-mx-4 sm:-mx-6'
+      : undefined;
+  const labelInset = framed
+    ? 'pl-2.5 sm:pl-5'
+    : bleed
+      ? 'pl-4 sm:pl-6'
+      : '';
 
   return (
-    <div className={cn('min-w-0', className)}>
+    <div
+      className={cn(
+        'min-w-0',
+        framed &&
+          'overflow-hidden rounded-2xl border border-border/70 bg-card px-2.5 pb-2 shadow-sm sm:px-5 sm:pb-2.5',
+        className
+      )}
+    >
       <div
         ref={scrollRef}
-        className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          'overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          // Bleed the schedule (and its bounding rules) to the card's side
+          // borders by cancelling the surrounding card's horizontal padding.
+          bleedX
+        )}
       >
         <div style={{ minWidth: labelWidth + trackWidth }}>
           {/* Month band */}
           {showMonths && (
             <div className="flex items-end">
               <div
-                className={cn(
-                  'sticky left-0 z-20 shrink-0 self-stretch border-r border-border/60',
-                  surfaceClassName
-                )}
+                className="sticky left-0 z-20 shrink-0 self-stretch border-r border-border/60 bg-card"
                 style={{ width: labelWidth }}
               />
               <div
@@ -292,8 +363,14 @@ export function StayTimeline({
                 {monthSegments.map((seg) => (
                   <div
                     key={seg.label}
-                    style={{ gridColumnStart: seg.startCol, gridColumnEnd: seg.endCol }}
-                    className="sticky left-0 truncate pb-1.5 pl-1 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70"
+                    style={{
+                      gridColumnStart: seg.startCol,
+                      gridColumnEnd: seg.endCol,
+                      // Stick just past the sticky label column so the active
+                      // month's label stays visible instead of hiding behind it.
+                      left: labelWidth,
+                    }}
+                    className="sticky truncate pb-1.5 pl-1 pt-2.5 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70 sm:pt-4"
                   >
                     {seg.label}
                   </div>
@@ -303,11 +380,11 @@ export function StayTimeline({
           )}
 
           {/* Date header */}
-          <div className="flex items-end">
+          <div className="flex items-end border-t border-border/60">
             <div
               className={cn(
-                'sticky left-0 z-20 flex shrink-0 items-end self-stretch border-r border-border/60 pb-2',
-                surfaceClassName
+                'sticky left-0 z-20 flex shrink-0 items-end self-stretch border-r border-border/60 bg-card pb-2 pt-2',
+                labelInset
               )}
               style={{ width: labelWidth }}
             >
@@ -316,7 +393,7 @@ export function StayTimeline({
               </span>
             </div>
             <div
-              className="grid min-w-0 flex-1 text-center"
+              className="grid min-w-0 flex-1 pt-2 text-center"
               style={{ gridTemplateColumns: gridCols }}
             >
               {days.map((day) => {
@@ -352,11 +429,11 @@ export function StayTimeline({
 
           {/* Rows */}
           {rows.length === 0 ? (
-            <div className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
+            <div className="border-y border-border/60 py-8 text-center text-sm text-muted-foreground">
               {emptyLabel}
             </div>
           ) : (
-            <div className="border-t border-border/60">
+            <div className="border-y border-border/60">
               {rows.map((row, rowIndex) => {
                 const showGroupHeader =
                   !!row.group && row.group !== rows[rowIndex - 1]?.group;
@@ -367,7 +444,8 @@ export function StayTimeline({
                       <div
                         className={cn(
                           'sticky left-0 z-10 flex shrink-0 items-center border-r border-border/60 py-2 pr-3',
-                          surfaceClassName
+                          labelInset,
+                          LABEL_SURFACE
                         )}
                         style={{ width: labelWidth }}
                       >
@@ -382,8 +460,8 @@ export function StayTimeline({
                   <div
                     className={cn(
                       'sticky left-0 z-10 flex shrink-0 items-center border-r border-border/60 pr-3',
-                      row.group ? 'pl-3' : '',
-                      surfaceClassName
+                      row.group ? 'pl-6 sm:pl-8' : labelInset,
+                      LABEL_SURFACE
                     )}
                     style={{ width: labelWidth }}
                   >
@@ -413,7 +491,7 @@ export function StayTimeline({
                     </div>
                     {/* Stay bands */}
                     <div
-                      className="relative grid h-11 items-center"
+                      className="relative grid h-11 grid-rows-1 items-center"
                       style={{ gridTemplateColumns: gridCols }}
                     >
                       {row.stays.map((stay) => (
@@ -435,41 +513,43 @@ export function StayTimeline({
         </div>
       </div>
 
-      {showControls && (
-        <div className="mt-2 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-8 rounded-full"
-            disabled={!canScrollLeft}
-            onClick={() => scrollByPage(-1)}
-            aria-label="Scroll back"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-8 rounded-full"
-            disabled={!canScrollRight}
-            onClick={() => scrollByPage(1)}
-            aria-label="Scroll forward"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      )}
-
-      {showLegend && presentVariants.size > 0 && (
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border/60 pt-4 text-xs text-muted-foreground">
-          {LEGEND.filter((l) => presentVariants.has(l.variant)).map((l) => (
-            <span key={l.variant} className="flex items-center gap-1.5">
-              <span className={cn('size-2 rounded-full', DOT_CLASS[l.variant])} />
-              {l.label}
-            </span>
-          ))}
+      {((showLegend && presentVariants.size > 0) || showControls) && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            {showLegend &&
+              LEGEND.filter((l) => presentVariants.has(l.variant)).map((l) => (
+                <span key={l.variant} className="flex items-center gap-1.5">
+                  <span className={cn('size-2 rounded-full', DOT_CLASS[l.variant])} />
+                  {l.label}
+                </span>
+              ))}
+          </div>
+          {showControls && (
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 rounded-full"
+                disabled={!canScrollLeft}
+                onClick={() => scrollByPage(-1)}
+                aria-label="Scroll back"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 rounded-full"
+                disabled={!canScrollRight}
+                onClick={() => scrollByPage(1)}
+                aria-label="Scroll forward"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

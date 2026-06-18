@@ -11,9 +11,9 @@ import { StayTimeline, type TimelineRow } from '@/components/stay-timeline';
  * dashboard schedule (pine = confirmed, brass = pending), never a live
  * component. The timeline rendering itself is the shared `StayTimeline`
  * design-system component (also used by the host dashboard); this wrapper only
- * supplies demo data and the home-tab rotation. Rotation stops the moment a
- * visitor takes control by clicking a tab, and pauses while they hover the
- * panel.
+ * supplies demo data and the home-tab rotation. Rotation pauses while the
+ * visitor hovers the panel and stops permanently the moment they interact with
+ * it in any way (a tab, the scroll controls, dragging the timeline, keyboard).
  */
 
 type StayStatus = 'confirmed' | 'pending';
@@ -42,10 +42,13 @@ interface DemoHome {
   rooms: DemoRoom[];
 }
 
-/* A two-week window in June 2026. The 8th is a Monday. */
+/* A two-week window in June 2026. The 8th is a Monday. The demo is date
+ * agnostic: it always renders this fixed window and pins "today" to a day
+ * inside it, so the showcase looks identical no matter when it's viewed. */
 const WINDOW_START_DAY = 8;
 const WINDOW_DAYS_COUNT = 14;
 const WINDOW_START_ISO = demoISO(WINDOW_START_DAY);
+const DEMO_TODAY_ISO = demoISO(12);
 
 /** Day-of-month within the demo window → ISO date string (always June 2026). */
 function demoISO(dayOfMonth: number): string {
@@ -169,7 +172,14 @@ function HomePanel({ home }: { home: DemoHome }) {
         rows={homeToRows(home)}
         windowStart={WINDOW_START_ISO}
         windowDays={WINDOW_DAYS_COUNT}
-        surfaceClassName="bg-card"
+        today={DEMO_TODAY_ISO}
+        // Wider columns than the dashboard default so the two-week window
+        // overflows its card and the scroll controls become live — letting
+        // visitors page through dates as a taste of the real schedule.
+        dayWidth={64}
+        framed={false}
+        bleed
+        showLegend
       />
     </div>
   );
@@ -216,6 +226,11 @@ export function StayShowcase({ className }: { className?: string }) {
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      // Any direct interaction (tapping a tab, working the scroll controls,
+      // dragging the timeline, keyboard nav) hands control to the visitor and
+      // permanently stops the auto-rotation.
+      onPointerDownCapture={() => setUserControlled(true)}
+      onKeyDownCapture={() => setUserControlled(true)}
     >
       <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
         My guest homes
@@ -293,17 +308,6 @@ export function StayShowcase({ className }: { className?: string }) {
         className="mt-5"
       >
         <HomePanel key={home.id} home={home} />
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border/60 pt-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-primary" />
-          Confirmed stay
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-brass" />
-          Pending request
-        </span>
       </div>
 
       <style>{`

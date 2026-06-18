@@ -57,6 +57,8 @@ export function HostStayTimeline({
       rows={rows}
       windowStart={windowStart}
       windowDays={windowDays}
+      showMonths
+      startAtToday
       showLegend
       emptyLabel="No rooms yet — add a room to start scheduling stays."
     />

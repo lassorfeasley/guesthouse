@@ -43,8 +43,8 @@ export function PortfolioSchedule({
           windowStart={timelineStart}
           windowDays={TIMELINE_DAYS}
           rowHeading="Homes & rooms"
-          surfaceClassName="bg-background"
           showMonths
+          startAtToday
           showLegend
           emptyLabel="No stays scheduled yet."
         />
