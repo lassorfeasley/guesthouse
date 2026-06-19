@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import { PlaceholderImage } from '@/components/placeholder-image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getDashboardProperty } from '@/lib/dashboard-property';
@@ -97,7 +98,13 @@ export default async function ManageBookingPage({
             <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-linear-to-br from-slate-700 via-slate-800 to-slate-950" />
+          <PlaceholderImage
+            type="home"
+            name={property.name}
+            seed={property.id}
+            className="absolute inset-0"
+            iconClassName="h-16 w-16"
+          />
         )}
         <div className="relative p-8">
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">

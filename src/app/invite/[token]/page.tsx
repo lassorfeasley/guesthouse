@@ -37,6 +37,7 @@ import {
   INVITATION_TYPE_LABELS,
 } from '@/lib/invitation-types';
 import { PhotoMosaic } from '@/components/photo-gallery';
+import { PlaceholderImage } from '@/components/placeholder-image';
 
 export async function generateMetadata({
   params,
@@ -188,6 +189,15 @@ export default async function InvitePage({
         <PhotoMosaic
           photos={property.property_images ?? []}
           className="mb-6"
+          emptyState={
+            <PlaceholderImage
+              type="home"
+              name={property.name}
+              seed={property.id}
+              className="absolute inset-0"
+              iconClassName="h-16 w-16"
+            />
+          }
         />
 
         <BookingProvider

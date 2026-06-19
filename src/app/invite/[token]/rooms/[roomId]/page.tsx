@@ -21,6 +21,7 @@ import {
   parseGuestPreviewBookingStatus,
 } from '@/lib/guest-preview';
 import { PhotoMosaic } from '@/components/photo-gallery';
+import { PlaceholderImage } from '@/components/placeholder-image';
 import {
   RoomHero,
   RoomAboutSection,
@@ -168,13 +169,25 @@ export default async function GuestRoomPage({
             {/* Left column */}
             <div className="min-w-0">
               {/* Title + hero banner */}
-              <PhotoMosaic photos={room.room_images ?? []} />
+              <PhotoMosaic
+                photos={room.room_images ?? []}
+                emptyState={
+                  <PlaceholderImage
+                    type="room"
+                    name={room.name}
+                    seed={room.id}
+                    className="absolute inset-0"
+                    iconClassName="h-14 w-14"
+                  />
+                }
+              />
 
               <RoomHero room={room} className="mt-6" />
 
               <ReturnToHouseCard
                 href={houseHref}
                 houseName={property.name}
+                houseId={property.id}
                 houseImageUrl={property.hero_image_url}
                 label="Back to house"
                 className="mt-6"

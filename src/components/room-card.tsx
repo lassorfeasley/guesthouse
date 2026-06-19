@@ -1,11 +1,13 @@
 'use client';
 
 import Image from 'next/image';
-import { Check, ImageIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { summarizeBeds } from '@/lib/validations';
 import { cn } from '@/lib/utils';
+import { PlaceholderImage } from '@/components/placeholder-image';
 
 export type RoomCardRoom = {
+  id?: string | null;
   name: string;
   image_url: string | null;
   beds: string[];
@@ -42,7 +44,13 @@ export function RoomCard({
           />
         </div>
       ) : (
-        <div className="aspect-4/3 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 transition duration-300 group-hover:from-slate-600 group-hover:via-slate-700 group-hover:to-slate-900" />
+        <PlaceholderImage
+          type="room"
+          name={room.name}
+          seed={room.id}
+          className="aspect-4/3 w-full rounded-2xl"
+          iconClassName="h-9 w-9 transition duration-300 group-hover:scale-105"
+        />
       )}
       <p className={cn('mt-4 font-medium', titleClass)}>{room.name}</p>
       <p className={cn('text-muted-foreground', metaClass)}>
@@ -94,9 +102,13 @@ export function SelectableRoomCard({
             />
           </div>
         ) : (
-          <div className="flex aspect-4/3 w-full items-center justify-center bg-muted">
-            <ImageIcon className="h-7 w-7 text-muted-foreground/40" aria-hidden />
-          </div>
+          <PlaceholderImage
+            type="room"
+            name={room.name}
+            seed={room.id}
+            className="aspect-4/3 w-full"
+            iconClassName="h-9 w-9 transition duration-300 group-hover:scale-105"
+          />
         )}
         {selected && (
           <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background shadow-sm">

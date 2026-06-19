@@ -16,6 +16,7 @@ import { GuestInformationSection } from '@/components/dashboard/guest-informatio
 import { PropertyMap } from '@/components/dashboard/property-map';
 import { SectionNav } from '@/components/dashboard/section-nav';
 import { PhotoMosaic } from '@/components/photo-gallery';
+import { PlaceholderImage } from '@/components/placeholder-image';
 import { Pencil, Plus, MapPin, Check } from 'lucide-react';
 import Link from 'next/link';
 import type { PropertyNote } from '@/types/database';
@@ -148,9 +149,13 @@ export default async function OverviewPage({
         photos={propertyImages ?? []}
         className="mt-6"
         emptyState={
-          <p className="text-sm text-muted-foreground">
-            Add photos to showcase your place
-          </p>
+          <PlaceholderImage
+            type="home"
+            name={property.name}
+            seed={property.id}
+            className="absolute inset-0"
+            iconClassName="h-16 w-16"
+          />
         }
         manageAction={
           <PropertyEditDialog

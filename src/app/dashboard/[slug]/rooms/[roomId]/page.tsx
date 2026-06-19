@@ -153,6 +153,7 @@ export default async function RoomProfilePage({
             <ReturnToHouseCard
               href={`/dashboard/${slug}/overview`}
               houseName={property.name}
+              houseId={property.id}
               houseImageUrl={property.hero_image_url}
               label="Back to home"
               className="mt-6"

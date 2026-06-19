@@ -6,6 +6,7 @@ import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import { PortfolioSchedule } from '@/components/dashboard/portfolio-schedule';
 import { PortfolioBookingSidebar } from '@/components/dashboard/portfolio-booking-sidebar';
 import { formatDateRange } from '@/lib/dates';
+import { PlaceholderImage } from '@/components/placeholder-image';
 import type { PortfolioData, PortfolioHouse } from '@/lib/portfolio';
 
 export function PortfolioOverview({
@@ -89,9 +90,13 @@ function HouseCard({ house }: { house: PortfolioHouse }) {
           />
         </div>
       ) : (
-        <div className="relative flex aspect-4/3 w-full flex-col justify-end overflow-hidden rounded-2xl bg-linear-to-br from-slate-700 via-slate-800 to-slate-950 p-5 transition duration-300 group-hover:from-slate-600 group-hover:via-slate-700 group-hover:to-slate-900">
-          <p className="text-lg font-medium text-white">{property.name}</p>
-        </div>
+        <PlaceholderImage
+          type="home"
+          name={property.name}
+          seed={property.id}
+          className="aspect-4/3 w-full rounded-2xl"
+          iconClassName="h-10 w-10 transition duration-300 group-hover:scale-105"
+        />
       )}
 
       <div className="mt-4 flex items-start justify-between gap-3">

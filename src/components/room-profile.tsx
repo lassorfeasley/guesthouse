@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, BedDouble, Check, ChevronRight, Home } from 'lucide-react';
+import { ArrowLeft, BedDouble, Check, ChevronRight } from 'lucide-react';
 import { summarizeBeds, BED_SIZE_LABELS } from '@/lib/validations';
 import { cn } from '@/lib/utils';
+import { PlaceholderImage } from '@/components/placeholder-image';
 import type { Amenity } from '@/types/database';
 
 /**
@@ -71,12 +72,14 @@ export function RoomBreadcrumb({
 export function ReturnToHouseCard({
   href,
   houseName,
+  houseId,
   houseImageUrl,
   label = 'Back to house',
   className,
 }: {
   href: string;
   houseName: string;
+  houseId?: string | null;
   houseImageUrl?: string | null;
   label?: string;
   className?: string;
@@ -98,9 +101,13 @@ export function ReturnToHouseCard({
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Home className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-          </div>
+          <PlaceholderImage
+            type="home"
+            name={houseName}
+            seed={houseId}
+            className="h-full w-full"
+            iconClassName="h-6 w-6"
+          />
         )}
       </div>
       <div className="min-w-0 flex-1">
