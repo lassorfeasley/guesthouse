@@ -3,6 +3,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { render } from '@react-email/components';
 import { appUrl } from '@/lib/env';
+import { filterSuppressed } from '@/lib/email/suppression';
 
 let resend: Resend | null = null;
 let smtp: Transporter | null = null;
@@ -59,9 +60,18 @@ export type DeliverableEmail = {
   from: string;
   subject: string;
   html: string;
+  /** Plain-text alternative sent alongside the HTML (multipart/alternative). */
+  text?: string;
   attachments?: { filename: string; content: Buffer | string }[];
   headers?: Record<string, string>;
   replyTo?: string;
+  /**
+   * Bypass the suppression list. Reserved for critical, user-initiated mail
+   * (auth/magic-link, password reset) that must send even to an address that
+   * previously bounced or complained — locking those out would be worse than
+   * the deliverability hit. Lifecycle/marketing mail must never set this.
+   */
+  skipSuppressionCheck?: boolean;
 };
 
 /**
@@ -69,17 +79,35 @@ export type DeliverableEmail = {
  * Resend → console). Shared by the synchronous `sendEmail` path and the outbox
  * drainer, so both behave identically. Throws on provider errors so the caller
  * (or the outbox retry loop) can react.
+ *
+ * Recipients on the suppression list (hard bounces, spam complaints) are
+ * dropped before sending to protect sender reputation; if every recipient is
+ * suppressed the send is skipped and reported as a no-op success so the outbox
+ * does not retry.
  */
 export async function deliverRendered(
   msg: DeliverableEmail
 ): Promise<{ id: string | null }> {
+  let to = msg.to;
+  if (!msg.skipSuppressionCheck) {
+    const { allowed, suppressed } = await filterSuppressed(msg.to);
+    if (suppressed.length > 0) {
+      console.warn(
+        `[email] skipping ${suppressed.length} suppressed recipient(s): ${suppressed.join(', ')}`
+      );
+    }
+    if (allowed.length === 0) return { id: 'suppressed' };
+    to = allowed;
+  }
+
   const smtpClient = getSmtp();
   if (smtpClient) {
     const info = await smtpClient.sendMail({
       from: msg.from,
-      to: msg.to,
+      to,
       subject: msg.subject,
       html: msg.html,
+      text: msg.text,
       attachments: msg.attachments,
       headers: msg.headers,
       replyTo: msg.replyTo,
@@ -90,7 +118,7 @@ export async function deliverRendered(
   const client = getResend();
   if (!client) {
     console.log('[email:dev]', {
-      to: msg.to,
+      to,
       subject: msg.subject,
       replyTo: msg.replyTo,
       headers: msg.headers,
@@ -101,9 +129,10 @@ export async function deliverRendered(
 
   const { data, error } = await client.emails.send({
     from: msg.from,
-    to: msg.to,
+    to,
     subject: msg.subject,
     html: msg.html,
+    text: msg.text,
     attachments: msg.attachments,
     headers: msg.headers,
     replyTo: msg.replyTo,
@@ -129,6 +158,7 @@ export async function sendEmail({
   headers,
   replyTo,
   fromName,
+  skipSuppressionCheck = true,
 }: {
   to: string | string[];
   subject: string;
@@ -139,16 +169,27 @@ export async function sendEmail({
   replyTo?: string;
   /** Personalizes the sender display name: "{fromName} via Gracious". */
   fromName?: string | null;
+  /**
+   * Defaults to `true`: this sync path is reserved for critical auth/sign-in
+   * mail that must reach the user even if their address was suppressed. Set
+   * `false` to honor the suppression list.
+   */
+  skipSuppressionCheck?: boolean;
 }) {
-  const html = await render(react);
+  const [html, text] = await Promise.all([
+    render(react),
+    render(react, { plainText: true }),
+  ]);
   return deliverRendered({
     to: Array.isArray(to) ? to : [to],
     from: fromAddressAs(fromName),
     subject,
     html,
+    text,
     attachments,
     headers,
     replyTo,
+    skipSuppressionCheck,
   });
 }
 

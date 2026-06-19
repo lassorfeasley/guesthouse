@@ -19,6 +19,7 @@ type OutboxRow = {
   reply_to: string | null;
   subject: string;
   html: string;
+  text: string | null;
   headers: Record<string, string> | null;
   attachments: StoredAttachment[] | null;
   attempts: number;
@@ -65,7 +66,10 @@ function encodeAttachments(
 export async function enqueueEmail(
   opts: EnqueueEmailOptions
 ): Promise<{ id: string | null }> {
-  const html = await render(opts.react);
+  const [html, text] = await Promise.all([
+    render(opts.react),
+    render(opts.react, { plainText: true }),
+  ]);
   const admin = createAdminClient();
 
   const row = {
@@ -74,6 +78,7 @@ export async function enqueueEmail(
     reply_to: opts.replyTo ?? null,
     subject: opts.subject,
     html,
+    text,
     headers: opts.headers ?? null,
     attachments: encodeAttachments(opts.attachments),
     idempotency_key: opts.idempotencyKey ?? null,
@@ -142,6 +147,7 @@ export async function drainEmailOutbox(): Promise<DrainResult> {
         from: row.from_address,
         subject: row.subject,
         html: row.html,
+        text: row.text ?? undefined,
         replyTo: row.reply_to ?? undefined,
         headers: row.headers ?? undefined,
         attachments: row.attachments?.map((a) => ({
