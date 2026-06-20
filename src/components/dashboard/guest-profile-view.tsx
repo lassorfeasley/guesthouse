@@ -81,11 +81,11 @@ export function GuestProfileView({
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <Link
-        href={`/dashboard/${slug}/guests`}
+        href={`/dashboard/${slug}/bookings`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Bookings
+        Visits
       </Link>
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">

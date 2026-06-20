@@ -28,7 +28,7 @@ function excludeBooking(
   return out;
 }
 
-export const metadata = { title: 'Booking' };
+export const metadata = { title: 'Visit' };
 
 export default async function ManageBookingPage({
   params,
@@ -77,11 +77,11 @@ export default async function ManageBookingPage({
   return (
     <DashboardContainer>
       <Link
-        href={`/dashboard/${slug}/requests`}
+        href={`/dashboard/${slug}/bookings`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to requests
+        Back to visits
       </Link>
 
       {/* House card */}

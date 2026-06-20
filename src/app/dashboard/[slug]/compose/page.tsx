@@ -8,5 +8,5 @@ export default async function ComposePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  redirect(`/dashboard/${slug}/guests`);
+  redirect(`/dashboard/${slug}/bookings`);
 }

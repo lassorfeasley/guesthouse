@@ -6,7 +6,6 @@ import {
   Users,
   Home,
   Settings,
-  Bell,
   ChevronDown,
   LogOut,
   Plus,
@@ -32,7 +31,6 @@ import { Wordmark } from '@/components/brand/wordmark';
 interface DashboardTopNavProps {
   properties: Property[];
   currentProperty: Property;
-  requestCount?: number;
   userEmail?: string;
   userId?: string;
   showAdminLink?: boolean;
@@ -41,7 +39,6 @@ interface DashboardTopNavProps {
 export function DashboardTopNav({
   properties,
   currentProperty,
-  requestCount = 0,
   userEmail,
   userId,
   showAdminLink = false,
@@ -133,35 +130,12 @@ export function DashboardTopNav({
           </DropdownMenu>
 
           <Link
-            href={`${base}/guests`}
-            aria-label="Bookings"
-            className={navLinkClass(isActive('guests'))}
+            href={`${base}/bookings`}
+            aria-label="Visits"
+            className={navLinkClass(isActive('bookings'))}
           >
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Bookings</span>
-          </Link>
-
-          <Link
-            href={`${base}/requests`}
-            aria-label={
-              requestCount > 0
-                ? `Requests (${requestCount} active)`
-                : 'Requests'
-            }
-            className={cn(
-              'relative flex items-center justify-center rounded-md p-2 transition-colors',
-              isActive('requests')
-                ? 'bg-muted text-foreground'
-                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-            )}
-          >
-            <Bell className="h-5 w-5" />
-            {requestCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-              </span>
-            )}
+            <span className="hidden sm:inline">Visits</span>
           </Link>
 
           <DropdownMenu>

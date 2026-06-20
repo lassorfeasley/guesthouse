@@ -34,7 +34,6 @@ export default async function PropertyDashboardLayout({
       <DashboardTopNav
         properties={properties}
         currentProperty={currentProperty}
-        requestCount={requestCount ?? 0}
         userEmail={user.email ?? undefined}
         userId={user.id}
         showAdminLink={isSiteAdmin(user)}

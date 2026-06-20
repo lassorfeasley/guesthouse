@@ -14,10 +14,11 @@ export function RequestsAlertBanner({
   requestCount,
 }: RequestsAlertBannerProps) {
   const pathname = usePathname();
-  const requestsHref = `/dashboard/${slug}/requests`;
+  const bookingsHref = `/dashboard/${slug}/bookings`;
+  const requestsHref = `${bookingsHref}?status=requested`;
 
-  // Nothing to act on, or already on the requests page — stay quiet.
-  if (requestCount < 1 || pathname.startsWith(requestsHref)) return null;
+  // Nothing to act on, or already on the bookings hub — stay quiet.
+  if (requestCount < 1 || pathname.startsWith(bookingsHref)) return null;
 
   const isPlural = requestCount > 1;
   const guestNoun = isPlural ? 'guests are' : 'guest is';
@@ -30,7 +31,7 @@ export function RequestsAlertBanner({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">
-            Action needed: {requestCount} booking{' '}
+            Action needed: {requestCount} visit{' '}
             {isPlural ? 'requests need' : 'request needs'} your approval
           </p>
           <p className="text-sm text-muted-foreground">
