@@ -27,15 +27,20 @@ export function RoomCard({
   room,
   className,
   compact = false,
-  showDescription = false,
 }: RoomCardProps) {
   const titleClass = compact ? 'text-base' : 'text-lg';
   const metaClass = compact ? 'text-sm' : 'text-base';
+  // Mobile: a compact thumbnail with details beside it (like the person card).
+  // sm and up: the full stacked card with an image on top.
+  const imageWrapperClass =
+    'relative aspect-4/3 w-28 shrink-0 overflow-hidden rounded-xl sm:w-full sm:rounded-2xl';
 
   return (
-    <div className={cn('block', className)}>
+    <div
+      className={cn('flex items-center gap-4 sm:block sm:items-stretch', className)}
+    >
       {room.image_url ? (
-        <div className="relative aspect-4/3 w-full overflow-hidden rounded-2xl">
+        <div className={imageWrapperClass}>
           <Image
             src={room.image_url}
             alt={room.name}
@@ -48,19 +53,16 @@ export function RoomCard({
           type="room"
           name={room.name}
           seed={room.id}
-          className="aspect-4/3 w-full rounded-2xl"
+          className={imageWrapperClass}
           iconClassName="h-9 w-9 transition duration-300 group-hover:scale-105"
         />
       )}
-      <p className={cn('mt-4 font-medium', titleClass)}>{room.name}</p>
-      <p className={cn('text-muted-foreground', metaClass)}>
-        {summarizeBeds(room.beds)} · Up to {room.max_occupancy} guests
-      </p>
-      {showDescription && room.description && (
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {room.description}
+      <div className="min-w-0 flex-1 sm:mt-4">
+        <p className={cn('font-medium', titleClass)}>{room.name}</p>
+        <p className={cn('text-muted-foreground', metaClass)}>
+          {summarizeBeds(room.beds)} · Up to {room.max_occupancy} guests
         </p>
-      )}
+      </div>
     </div>
   );
 }

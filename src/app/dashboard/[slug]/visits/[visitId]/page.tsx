@@ -10,6 +10,8 @@ import { guestKeyFromEmail, guestKeyFromManualVisit } from '@/lib/guest-keys';
 import { formatDateRange } from '@/lib/dates';
 import { createClient } from '@/lib/supabase/server';
 import { PropertySections } from '@/components/property-sections';
+import { PersonCard } from '@/components/person-card';
+import { Button } from '@/components/ui/button';
 import { VisitManageView } from '@/components/dashboard/visit-manage-view';
 import { DashboardContainer } from '@/components/dashboard/dashboard-container';
 import type { RoomAvailability } from '@/lib/guest-calendar';
@@ -113,6 +115,21 @@ export default async function ManageVisitPage({
           <p className="mt-2 text-base text-white/80">{heroSubtitle}</p>
         </div>
       </div>
+
+      <PersonCard
+        name={guestName}
+        imageUrl={visit.guest.avatar_url}
+        seed={visit.guest.email}
+        role={visit.relationship}
+        email={visit.guest.email}
+        phone={visit.guest_phone}
+        className="mt-6"
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href={guestProfileHref}>View guest profile</Link>
+          </Button>
+        }
+      />
 
       <VisitManageView
         visit={visit}

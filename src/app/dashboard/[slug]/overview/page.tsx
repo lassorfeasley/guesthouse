@@ -17,6 +17,8 @@ import { PropertyMap } from '@/components/dashboard/property-map';
 import { SectionNav } from '@/components/dashboard/section-nav';
 import { PhotoMosaic } from '@/components/photo-gallery';
 import { PlaceholderImage } from '@/components/placeholder-image';
+import { PersonAvatar } from '@/components/ui/person-avatar';
+import { guestProfileHref } from '@/lib/guest-keys';
 import { Pencil, Plus, MapPin, Check } from 'lucide-react';
 import Link from 'next/link';
 import type { PropertyNote } from '@/types/database';
@@ -69,7 +71,7 @@ export default async function OverviewPage({
   const { data: visits } = await supabase
     .from('visits')
     .select(
-      `id, status, invitation_id, guest_name, guest_email, guest:users!guest_user_id(name, email), dates:visit_dates(check_in, check_out)`
+      `id, status, invitation_id, guest_name, guest_email, relationship, guest:users!guest_user_id(name, email, avatar_url), dates:visit_dates(check_in, check_out)`
     )
     .eq('property_id', property.id)
     .in('status', ['approved', 'requested']);
@@ -77,7 +79,7 @@ export default async function OverviewPage({
   const normalized = (visits ?? []).map((b) => {
     const dates = Array.isArray(b.dates) ? b.dates[0] : b.dates;
     const guest = (Array.isArray(b.guest) ? b.guest[0] : b.guest) as
-      | { name: string | null; email: string }
+      | { name: string | null; email: string; avatar_url: string | null }
       | null;
     const guestName =
       guest?.name ??
@@ -85,10 +87,14 @@ export default async function OverviewPage({
       b.guest_name ??
       b.guest_email?.split('@')[0] ??
       'Guest';
+    const email = guest?.email ?? b.guest_email ?? null;
     return {
       id: b.id,
       status: b.status,
       guestName,
+      email,
+      avatarUrl: guest?.avatar_url ?? null,
+      relationship: b.relationship ?? null,
       checkIn: dates?.check_in ?? '',
       checkOut: dates?.check_out ?? '',
       isManual: !b.invitation_id,
@@ -374,14 +380,32 @@ export default async function OverviewPage({
             {upcoming.map((visit) => (
               <li key={visit.id}>
                 <div className="flex items-center justify-between gap-4 rounded-2xl border bg-card p-5 shadow-sm">
-                  <div>
-                    <p className="text-lg font-medium">{visit.guestName}</p>
-                    {visit.checkIn && visit.checkOut && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {formatDateRange(visit.checkIn, visit.checkOut)}
+                  <Link
+                    href={
+                      visit.email
+                        ? guestProfileHref(slug, visit.email)
+                        : `/dashboard/${slug}/visits/${visit.id}`
+                    }
+                    className="group flex min-w-0 items-center gap-4"
+                  >
+                    <PersonAvatar
+                      name={visit.guestName}
+                      imageUrl={visit.avatarUrl}
+                      seed={visit.email}
+                      size="lg"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-medium transition-colors group-hover:text-foreground/70">
+                        {visit.guestName}
                       </p>
-                    )}
-                  </div>
+                      <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                        {visit.relationship ? `${visit.relationship} · ` : ''}
+                        {visit.checkIn && visit.checkOut
+                          ? formatDateRange(visit.checkIn, visit.checkOut)
+                          : ''}
+                      </p>
+                    </div>
+                  </Link>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/dashboard/${slug}/visits/${visit.id}`}>
                       Manage

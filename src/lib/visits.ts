@@ -24,6 +24,7 @@ function normalizeVisitGuest(
       id: userGuest.id,
       name: userGuest.name,
       email: userGuest.email,
+      avatar_url: userGuest.avatar_url,
     };
   }
 
@@ -31,6 +32,7 @@ function normalizeVisitGuest(
     id: null,
     name: data.guest_name,
     email: data.guest_email,
+    avatar_url: null,
   };
 }
 

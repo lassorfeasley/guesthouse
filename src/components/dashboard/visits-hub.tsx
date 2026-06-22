@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { getInviteUrl } from '@/lib/invite-url';
 import { guestProfileHref } from '@/lib/guest-keys';
+import { PersonAvatar } from '@/components/ui/person-avatar';
 import { isLimitReachedResponse } from '@/lib/billing-client';
 import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
 import type { VisitStatus, InvitationStatus } from '@/types/database';
@@ -53,6 +54,8 @@ export interface VisitItem {
   id: string;
   guestName: string;
   email: string | null;
+  avatarUrl: string | null;
+  relationship: string | null;
   status: VisitStatus;
   checkIn: string;
   checkOut: string;
@@ -67,6 +70,8 @@ export interface InviteItem {
   id: string;
   guestName: string;
   email: string;
+  avatarUrl: string | null;
+  relationship: string | null;
   status: InvitationStatus;
   type: string;
   token: string;
@@ -99,18 +104,6 @@ const TAB_LABEL: Record<VisitTab, string> = {
   past: 'Past visits',
   cancelled: 'Cancelled',
 };
-
-function initials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || '?'
-  );
-}
 
 function matchesQuery(query: string, ...fields: (string | null | undefined)[]) {
   if (!query) return true;
@@ -535,6 +528,7 @@ function CardShell({
   token,
   name,
   email,
+  avatarUrl,
   href,
   headerActions,
   cardLabel,
@@ -548,6 +542,7 @@ function CardShell({
   token: string | null;
   name: string;
   email: string | null;
+  avatarUrl?: string | null;
   /** When set, the entire card becomes a link to this destination. */
   href?: string;
   /** Top-right action cluster; replaces the copy-link slot when provided. */
@@ -606,9 +601,12 @@ function CardShell({
       <div className="flex flex-1 flex-col p-4">
         {!bare && (
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-              {initials(name)}
-            </div>
+            <PersonAvatar
+              name={name}
+              imageUrl={avatarUrl}
+              seed={email}
+              size="md"
+            />
             <div className="min-w-0">
               <p
                 className={cn(
@@ -770,6 +768,7 @@ function VisitCard({
       token={visit.token}
       name={visit.guestName}
       email={visit.email}
+      avatarUrl={visit.avatarUrl}
       href={href}
       cardLabel={`View ${firstName}'s visit`}
       bare
@@ -779,16 +778,19 @@ function VisitCard({
       }
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-          {initials(visit.guestName)}
-        </div>
+        <PersonAvatar
+          name={visit.guestName}
+          imageUrl={visit.avatarUrl}
+          seed={visit.email}
+          size="md"
+        />
         <div className="min-w-0">
           <p className="truncate font-semibold tracking-tight group-hover:underline">
             {firstName}&apos;s{' '}
             <span className={state.className}>{state.word}</span> visit
           </p>
           <p className="truncate text-sm text-muted-foreground">
-            {visit.email ?? 'No email on file'}
+            {visit.relationship ?? visit.email ?? 'No email on file'}
           </p>
         </div>
       </div>
@@ -862,6 +864,7 @@ function InviteCard({
       token={invite.token}
       name={invite.guestName}
       email={invite.email}
+      avatarUrl={invite.avatarUrl}
       href={href}
       cardLabel={`View ${firstName}'s invitation`}
       bare
@@ -883,9 +886,12 @@ function InviteCard({
       }
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-          {initials(invite.guestName)}
-        </div>
+        <PersonAvatar
+          name={invite.guestName}
+          imageUrl={invite.avatarUrl}
+          seed={invite.email}
+          size="md"
+        />
         <div className="min-w-0">
           <p className="truncate font-semibold tracking-tight group-hover:underline">
             {hasName && <>{firstName}&apos;s </>}
@@ -895,7 +901,7 @@ function InviteCard({
             invitation
           </p>
           <p className="truncate text-sm text-muted-foreground">
-            {invite.email ?? 'No email on file'}
+            {invite.relationship ?? invite.email ?? 'No email on file'}
           </p>
         </div>
       </div>

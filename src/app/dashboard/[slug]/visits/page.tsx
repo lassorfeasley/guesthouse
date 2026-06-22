@@ -52,8 +52,8 @@ export default async function VisitsPage({
     .from('visits')
     .select(
       `
-      id, status, invitation_id, guest_name, guest_email, party_size, notes,
-      guest:users!guest_user_id(name, email),
+      id, status, invitation_id, guest_name, guest_email, relationship, party_size, notes,
+      guest:users!guest_user_id(name, email, avatar_url),
       dates:visit_dates(check_in, check_out),
       visit_rooms(room:rooms(name)),
       invitation:invitations(token)
@@ -62,12 +62,32 @@ export default async function VisitsPage({
     .eq('property_id', property.id)
     .order('created_at', { ascending: false });
 
+  // Batch-fetch avatars by email so account-holding guests show their photo
+  // even on rows where there's no guest_user_id join (manual stays, invites).
+  const emailSet = new Set<string>();
+  for (const b of visitRows ?? []) {
+    if (b.guest_email) emailSet.add(b.guest_email.toLowerCase());
+  }
+  for (const inv of invitations ?? []) {
+    if (inv.guest_email) emailSet.add(inv.guest_email.toLowerCase());
+  }
+  const avatarByEmail = new Map<string, string | null>();
+  if (emailSet.size > 0) {
+    const { data: members } = await supabase
+      .from('users')
+      .select('email, avatar_url')
+      .in('email', Array.from(emailSet));
+    for (const m of members ?? []) {
+      avatarByEmail.set(m.email.toLowerCase(), m.avatar_url);
+    }
+  }
+
   const visits: VisitItem[] = (visitRows ?? [])
     .map((b): VisitItem | null => {
       const dates = Array.isArray(b.dates) ? b.dates[0] : b.dates;
       if (!dates?.check_in || !dates?.check_out) return null;
       const guest = (Array.isArray(b.guest) ? b.guest[0] : b.guest) as
-        | { name: string | null; email: string }
+        | { name: string | null; email: string; avatar_url: string | null }
         | null;
       const guestName =
         guest?.name ??
@@ -81,10 +101,15 @@ export default async function VisitsPage({
           return room?.name ?? 'Room';
         }) ?? [];
       const inv = Array.isArray(b.invitation) ? b.invitation[0] : b.invitation;
+      const email = guest?.email ?? b.guest_email ?? null;
       return {
         id: b.id,
         guestName,
-        email: guest?.email ?? b.guest_email ?? null,
+        email,
+        avatarUrl:
+          guest?.avatar_url ??
+          (email ? (avatarByEmail.get(email.toLowerCase()) ?? null) : null),
+        relationship: b.relationship ?? null,
         status: b.status as VisitStatus,
         checkIn: dates.check_in,
         checkOut: dates.check_out,
@@ -105,6 +130,8 @@ export default async function VisitsPage({
     id: inv.id,
     guestName: inv.guest_name ?? inv.guest_email,
     email: inv.guest_email,
+    avatarUrl: avatarByEmail.get(inv.guest_email.toLowerCase()) ?? null,
+    relationship: inv.relationship ?? null,
     status: inv.status,
     type: inv.type,
     token: inv.token,

@@ -23,7 +23,7 @@ export const getInvitationByToken = cache(async function getInvitationByToken(
     .select(
       `
       *,
-      property:properties(*, property_images(*), property_notes(*), owner:users!owner_id(first_name, last_name, email)),
+      property:properties(*, property_images(*), property_notes(*), owner:users!owner_id(first_name, last_name, email, avatar_url)),
       invitation_rooms(room:rooms(*, room_images(*))),
       invitation_windows(*)
     `

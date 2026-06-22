@@ -38,6 +38,7 @@ import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { SurveyDialogLayout } from '@/components/dashboard/survey-dialog-layout';
 import { ManualStaySurvey } from '@/components/dashboard/host-visit-dialog';
+import { GuestCombobox } from '@/components/dashboard/guest-combobox';
 import { VisitProvider, useOptionalVisit } from '@/components/guest/visit-context';
 import { toast } from 'sonner';
 import { UserPlus } from 'lucide-react';
@@ -106,6 +107,7 @@ export function InviteGuestDialog({
       guest_email: '',
       guest_first_name: '',
       guest_last_name: '',
+      relationship: '',
       type: 'standing',
       requires_approval: false,
       whole_home: false,
@@ -170,6 +172,7 @@ export function InviteGuestDialog({
       guest_email: '',
       guest_first_name: '',
       guest_last_name: '',
+      relationship: '',
       type: 'standing',
       requires_approval: false,
       whole_home: false,
@@ -439,7 +442,20 @@ export function InviteGuestDialog({
                   <FormItem>
                     <FormLabel>Guest email</FormLabel>
                     <FormControl>
-                      <Input type="email" autoFocus {...field} />
+                      <GuestCombobox
+                        propertyId={propertyId}
+                        value={field.value}
+                        autoFocus
+                        onEmailChange={field.onChange}
+                        onPickGuest={(g) => {
+                          if (g.firstName)
+                            form.setValue('guest_first_name', g.firstName);
+                          if (g.lastName)
+                            form.setValue('guest_last_name', g.lastName);
+                          if (g.relationship)
+                            form.setValue('relationship', g.relationship);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -483,6 +499,25 @@ export function InviteGuestDialog({
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="relationship"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Relationship (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. College friend, Aunt, Coworker"
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      How you know them — shown on their guest profile.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           )}
 

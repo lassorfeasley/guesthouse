@@ -29,7 +29,7 @@ export default async function GuestProfilePage({
     .from('visits')
     .select(
       `
-      id, status, invitation_id, guest_name, guest_email, guest_phone, party_size, notes,
+      id, status, invitation_id, guest_name, guest_email, guest_phone, relationship, party_size, notes,
       guest:users!guest_user_id(name, email),
       dates:visit_dates(check_in, check_out),
       visit_rooms(room:rooms(name)),
@@ -47,5 +47,23 @@ export default async function GuestProfilePage({
   const guest = findRosterEntry(roster, guestKey);
   if (!guest) notFound();
 
-  return <GuestProfileView guest={guest} slug={slug} today={today} />;
+  // A guest who is also a Gracious account may have uploaded an avatar.
+  let avatarUrl: string | null = null;
+  if (guest.email) {
+    const { data: member } = await supabase
+      .from('users')
+      .select('avatar_url')
+      .eq('email', guest.email)
+      .maybeSingle();
+    avatarUrl = member?.avatar_url ?? null;
+  }
+
+  return (
+    <GuestProfileView
+      guest={guest}
+      slug={slug}
+      today={today}
+      avatarUrl={avatarUrl}
+    />
+  );
 }

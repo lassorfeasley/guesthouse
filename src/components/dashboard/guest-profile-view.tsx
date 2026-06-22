@@ -3,10 +3,7 @@ import {
   ArrowLeft,
   Calendar,
   ChevronRight,
-  Mail,
-  Phone,
   Send,
-  User,
 } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { formatDate, formatDateRange } from '@/lib/dates';
@@ -14,6 +11,7 @@ import { INVITATION_TYPE_LABELS } from '@/lib/invitation-types';
 import { StaySummaryList } from '@/components/stay-summary-list';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PersonCard } from '@/components/person-card';
 import { GuestProfileActions } from '@/components/dashboard/guest-profile-actions';
 import type { GuestRosterEntry } from '@/lib/guest-roster';
 
@@ -30,16 +28,6 @@ const statusVariant: Record<
   declined: 'destructive',
   cancelled: 'outline',
 };
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}
 
 function guestHeadline(
   guest: GuestRosterEntry,
@@ -65,10 +53,12 @@ export function GuestProfileView({
   guest,
   slug,
   today,
+  avatarUrl,
 }: {
   guest: GuestRosterEntry;
   slug: string;
   today: string;
+  avatarUrl?: string | null;
 }) {
   const headline = guestHeadline(guest, today);
   const upcomingManualId =
@@ -88,80 +78,54 @@ export function GuestProfileView({
         Visits
       </Link>
 
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <div className="p-6 sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold tracking-tight text-foreground">
-              {initials(guest.name)}
-            </div>
-            <div className="min-w-0 flex-1 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {guest.name}
-                </h1>
-                <Badge variant={headline.variant}>{headline.label}</Badge>
-              </div>
+      <PersonCard
+        name={guest.name}
+        imageUrl={avatarUrl}
+        seed={guest.email}
+        role={
+          guest.relationship ??
+          (!guest.email && !guest.phone
+            ? 'Manual stay — no contact info on file'
+            : null)
+        }
+        email={guest.email}
+        phone={guest.phone}
+        badges={<Badge variant={headline.variant}>{headline.label}</Badge>}
+        actions={
+          <GuestProfileActions
+            invitationToken={guest.invitation?.token}
+            invitationId={guest.invitation?.id}
+            invitationStatus={guest.invitation?.status}
+            manualVisitId={upcomingManualId}
+            invitePageHref={
+              guest.invitation?.token
+                ? `/invite/${guest.invitation.token}`
+                : undefined
+            }
+          />
+        }
+      />
 
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                {guest.email ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    {guest.email}
-                  </span>
-                ) : null}
-                {guest.phone ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Phone className="h-4 w-4 shrink-0" />
-                    {guest.phone}
-                  </span>
-                ) : null}
-                {!guest.email && !guest.phone && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <User className="h-4 w-4 shrink-0" />
-                    Manual stay — no contact info on file
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-4 text-sm">
-                <span>
-                  <span className="font-medium text-foreground">
-                    {guest.stays.length}
-                  </span>{' '}
-                  <span className="text-muted-foreground">
-                    {guest.stays.length === 1 ? 'stay' : 'stays'} total
-                  </span>
-                </span>
-                {guest.pastStaysCount > 0 && (
-                  <span>
-                    <span className="font-medium text-foreground">
-                      {guest.pastStaysCount}
-                    </span>{' '}
-                    <span className="text-muted-foreground">past</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 border-t pt-6">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Actions
-            </p>
-            <GuestProfileActions
-              invitationToken={guest.invitation?.token}
-              invitationId={guest.invitation?.id}
-              invitationStatus={guest.invitation?.status}
-              manualVisitId={upcomingManualId}
-              invitePageHref={
-                guest.invitation?.token
-                  ? `/invite/${guest.invitation.token}`
-                  : undefined
-              }
-            />
-          </div>
+      {guest.stays.length > 0 && (
+        <div className="flex flex-wrap gap-4 text-sm">
+          <span>
+            <span className="font-medium text-foreground">
+              {guest.stays.length}
+            </span>{' '}
+            <span className="text-muted-foreground">
+              {guest.stays.length === 1 ? 'stay' : 'stays'} total
+            </span>
+          </span>
+          {guest.pastStaysCount > 0 && (
+            <span>
+              <span className="font-medium text-foreground">
+                {guest.pastStaysCount}
+              </span>{' '}
+              <span className="text-muted-foreground">past</span>
+            </span>
+          )}
         </div>
-      </div>
+      )}
 
       {guest.upcomingStay && (
         <section className="space-y-4">

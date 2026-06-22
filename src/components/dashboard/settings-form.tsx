@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { normalizePrefs } from '@/lib/notification-prefs';
+import { AvatarUploader } from '@/components/dashboard/avatar-uploader';
+import { formatPersonName } from '@/lib/names';
 import type { NotificationPrefs, User } from '@/types/database';
 
 interface SettingsFormProps {
@@ -108,6 +110,21 @@ export function SettingsForm({
 
   return (
     <>
+      <section className="py-8">
+        <h2 className="text-lg font-medium">Your profile</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your photo appears next to your name across Gracious.
+        </p>
+        <div className="mt-6">
+          <AvatarUploader
+            userId={user.id}
+            name={formatPersonName(user, user.email) ?? user.email}
+            email={user.email}
+            avatarUrl={user.avatar_url}
+          />
+        </div>
+      </section>
+
       <section className="py-8">
         <h2 className="text-lg font-medium">Home name</h2>
         <p className="mt-1 text-sm text-muted-foreground">

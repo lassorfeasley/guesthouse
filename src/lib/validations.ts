@@ -134,6 +134,7 @@ export const invitationSchema = z
     guest_email: z.string().email('Enter a valid email'),
     guest_first_name: z.string().optional(),
     guest_last_name: z.string().optional(),
+    relationship: z.string().max(80, 'Keep it under 80 characters').optional(),
     type: z.enum(['standing', 'date_offer', 'prix_fixe']),
     requires_approval: z.boolean(),
     whole_home: z.boolean().optional(),

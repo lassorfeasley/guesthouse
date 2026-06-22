@@ -28,6 +28,8 @@ export interface GuestRosterEntry {
   name: string;
   email: string | null;
   phone: string | null;
+  /** Host's label for who this guest is to them, if set. */
+  relationship: string | null;
   invitation: GuestInvitationSummary | null;
   stays: GuestStay[];
   upcomingStay: GuestStay | null;
@@ -41,6 +43,7 @@ type BookingRow = {
   guest_name: string | null;
   guest_email: string | null;
   guest_phone: string | null;
+  relationship: string | null;
   party_size: number;
   notes: string | null;
   guest: { name: string | null; email: string } | { name: string | null; email: string }[] | null;
@@ -131,6 +134,7 @@ export function buildGuestRoster(
         name: seed.name,
         email: seed.email,
         phone: seed.phone ?? null,
+        relationship: null,
         invitation: null,
         stays: [],
         upcomingStay: null,
@@ -160,6 +164,9 @@ export function buildGuestRoster(
     ) {
       entry.invitation = invitationSummary(inv);
     }
+    if (inv.relationship && !entry.relationship) {
+      entry.relationship = inv.relationship;
+    }
   }
 
   for (const b of visits) {
@@ -180,6 +187,10 @@ export function buildGuestRoster(
       : null;
     if (invRaw && !entry.invitation) {
       entry.invitation = invitationSummary(invRaw as Invitation);
+    }
+
+    if (b.relationship && !entry.relationship) {
+      entry.relationship = b.relationship;
     }
 
     const stay = toStay(b);

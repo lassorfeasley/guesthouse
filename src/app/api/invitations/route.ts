@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
         guest_email: data.guest_email.toLowerCase(),
         guest_first_name: data.guest_first_name ?? null,
         guest_last_name: data.guest_last_name ?? null,
+        relationship: data.relationship?.trim() || null,
         type: data.type,
         message: data.message ?? null,
         requires_approval: preApproved ? false : data.requires_approval,
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
         guestEmail: data.guest_email.toLowerCase(),
         guestFirstName: data.guest_first_name ?? null,
         guestLastName: data.guest_last_name ?? null,
+        relationship: data.relationship?.trim() || null,
         roomIds,
         partySize: data.party_size ?? 1,
         checkIn: window.start_date,
@@ -163,6 +165,7 @@ interface PreApprovedStayArgs {
   guestEmail: string;
   guestFirstName: string | null;
   guestLastName: string | null;
+  relationship: string | null;
   roomIds: string[];
   partySize: number;
   checkIn: string;
@@ -183,6 +186,7 @@ async function bookPreApprovedStay(args: PreApprovedStayArgs) {
     guestEmail,
     guestFirstName,
     guestLastName,
+    relationship,
     roomIds,
     partySize,
     checkIn,
@@ -248,6 +252,7 @@ async function bookPreApprovedStay(args: PreApprovedStayArgs) {
       guest_first_name: guestFirstName,
       guest_last_name: guestLastName,
       guest_email: guestEmail,
+      relationship,
       notify_guest: true,
       created_by: createdBy,
       status: 'approved',

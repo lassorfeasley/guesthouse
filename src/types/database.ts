@@ -16,6 +16,8 @@ export interface User {
    * a property, and guest status is implicit for every account.
    */
   is_admin: boolean;
+  /** Uploaded profile photo. Null → a generated placeholder is shown. */
+  avatar_url: string | null;
   plan: PlanId;
   hosted_stays_used: number;
   bonus_invitations: number;
@@ -142,6 +144,8 @@ export interface Invitation {
   status: InvitationStatus;
   expires_at: string | null;
   message: string | null;
+  /** Host's label for who this guest is to them (e.g. "Sister"). */
+  relationship: string | null;
   requires_approval: boolean;
   /** Entire-home invitation: the guest must book all offered rooms. */
   whole_home: boolean;
@@ -166,6 +170,7 @@ export interface VisitGuest {
   id: string | null;
   name: string | null;
   email: string | null;
+  avatar_url: string | null;
 }
 
 export interface Visit {
@@ -179,6 +184,8 @@ export interface Visit {
   guest_name: string | null;
   guest_email: string | null;
   guest_phone: string | null;
+  /** Host's label for who this guest is to them (e.g. "Sister"). */
+  relationship: string | null;
   notify_guest: boolean;
   created_by: string | null;
   status: VisitStatus;

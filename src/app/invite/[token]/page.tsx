@@ -41,6 +41,7 @@ import {
 } from '@/lib/invitation-types';
 import { PhotoMosaic } from '@/components/photo-gallery';
 import { PlaceholderImage } from '@/components/placeholder-image';
+import { PersonCard } from '@/components/person-card';
 
 export async function generateMetadata({
   params,
@@ -188,6 +189,7 @@ export default async function InvitePage({
         first_name: string | null;
         last_name: string | null;
         email: string;
+        avatar_url: string | null;
       } | null;
     }
   ).owner;
@@ -257,6 +259,16 @@ export default async function InvitePage({
         >
           <div className="mt-8 grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
             <div className="min-w-0">
+              <PersonCard
+                name={hostName}
+                imageUrl={host?.avatar_url ?? null}
+                seed={host?.email}
+                role={`Your host at ${property.name}`}
+                email={host?.email}
+                size="md"
+                className="mb-6"
+              />
+
               {/* Invitation type */}
               <div className="flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-center sm:gap-4">
                 <div className="flex min-w-0 items-start gap-4 sm:items-center">
