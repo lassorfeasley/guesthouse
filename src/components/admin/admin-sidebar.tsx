@@ -58,7 +58,7 @@ export function AdminSidebar({
   }
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <Link
           href="/admin"
