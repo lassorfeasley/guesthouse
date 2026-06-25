@@ -3,16 +3,13 @@ import { enqueueEmail } from '@/lib/email/outbox';
 import { buildVisitEvent, generateIcs } from '@/lib/ical';
 import { googleCalendarUrl, outlookCalendarUrl } from '@/lib/calendar-links';
 import { formatDateRange, formatDate } from '@/lib/dates';
-import { inviteUrl } from '@/lib/invitations';
+import { inviteUrl, inviteSignInUrl } from '@/lib/invitations';
 import {
   FINAL_INVITE_REMINDER_STEP,
   inviteReminderLogType,
   type InviteReminderStep,
 } from '@/lib/invite-reminders';
-import {
-  buildAuthenticatedInviteUrl,
-  buildHostOnboardingUrl,
-} from '@/lib/auth-links';
+import { buildHostOnboardingUrl } from '@/lib/auth-links';
 import { userManagesAnyProperty } from '@/lib/auth';
 import { getVisitWithDetails } from '@/lib/visits';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -115,11 +112,7 @@ export async function notifyInvitationSent(invitationId: string) {
 
   if (!inv) return;
 
-  const signInUrl = await buildAuthenticatedInviteUrl(
-    admin,
-    inv.guest_email,
-    inv.token
-  );
+  const signInUrl = inviteSignInUrl(inv.token);
 
   const hostFooter = await hostInviteFooterProps(admin, inv.guest_email);
 
@@ -184,11 +177,7 @@ export async function notifyInviteReminder(
 
   if (!inv) return;
 
-  const signInUrl = await buildAuthenticatedInviteUrl(
-    admin,
-    inv.guest_email,
-    inv.token
-  );
+  const signInUrl = inviteSignInUrl(inv.token);
 
   const hostFooter = await hostInviteFooterProps(admin, inv.guest_email);
 

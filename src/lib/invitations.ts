@@ -95,3 +95,14 @@ export function inviteUrl(token: string): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   return `${base}/invite/${token}`;
 }
+
+/**
+ * Durable one-click sign-in URL for an invited guest — safe to embed in emails.
+ * Unlike a token_hash magic link, this carries no one-time credential: the
+ * invitation token itself is the credential. Hitting it establishes a guest
+ * session server-side (see /invite/[token]/enter) and lands on the invite page,
+ * so it never expires and can't be burned by email link scanners.
+ */
+export function inviteSignInUrl(token: string): string {
+  return `${inviteUrl(token)}/enter`;
+}

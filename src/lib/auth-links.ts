@@ -51,17 +51,20 @@ export async function buildHostOnboardingUrl(
 }
 
 /**
- * Mints a cross-device-safe token_hash magic link that verifies via
- * /auth/confirm and redirects to `next`, creating a passwordless account first
- * if the email is new. Returns `fallback` if anything goes wrong.
+ * Ensures a passwordless account exists for `email`, then mints a single-use
+ * Supabase `token_hash` magic-link credential for it. Returns `null` if the
+ * account can't be created or the link can't be minted.
+ *
+ * This is the raw credential behind both the emailed token_hash links and the
+ * durable `/invite/{token}/enter` flow, which mints and verifies a hash inside
+ * a single server request so it's never exposed in an email.
  */
-async function buildTokenHashLink(
+export async function mintGuestTokenHash(
   admin: AdminClient,
-  normalizedEmail: string,
-  next: string,
-  fallback: string
-): Promise<string> {
+  email: string
+): Promise<string | null> {
   const base = appUrl();
+  const normalizedEmail = email.toLowerCase();
   try {
     // generateLink({ type: 'magiclink' }) requires the user to already exist,
     // so create a passwordless guest account first if there isn't one.
@@ -78,7 +81,7 @@ async function buildTokenHashLink(
       });
       // Ignore "already registered" races; any other failure falls through.
       if (createError && !/registered|exists/i.test(createError.message)) {
-        return fallback;
+        return null;
       }
     }
 
@@ -89,14 +92,30 @@ async function buildTokenHashLink(
     });
 
     const tokenHash = data?.properties?.hashed_token;
-    if (error || !tokenHash) return fallback;
-
-    const url = new URL(`${base}/auth/confirm`);
-    url.searchParams.set('token_hash', tokenHash);
-    url.searchParams.set('type', 'magiclink');
-    url.searchParams.set('next', next);
-    return url.toString();
+    if (error || !tokenHash) return null;
+    return tokenHash;
   } catch {
-    return fallback;
+    return null;
   }
+}
+
+/**
+ * Mints a cross-device-safe token_hash magic link that verifies via
+ * /auth/confirm and redirects to `next`, creating a passwordless account first
+ * if the email is new. Returns `fallback` if anything goes wrong.
+ */
+async function buildTokenHashLink(
+  admin: AdminClient,
+  normalizedEmail: string,
+  next: string,
+  fallback: string
+): Promise<string> {
+  const tokenHash = await mintGuestTokenHash(admin, normalizedEmail);
+  if (!tokenHash) return fallback;
+
+  const url = new URL(`${appUrl()}/auth/confirm`);
+  url.searchParams.set('token_hash', tokenHash);
+  url.searchParams.set('type', 'magiclink');
+  url.searchParams.set('next', next);
+  return url.toString();
 }
