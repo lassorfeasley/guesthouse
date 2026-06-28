@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
   getInvitationByToken,
   isInvitationActive,
 } from '@/lib/invitations';
-import { getAuthUser } from '@/lib/auth';
+import { canManageProperty, getAuthUser } from '@/lib/auth';
+import { guestProfileHref } from '@/lib/guest-keys';
 import { getGuestVisitForInvitation } from '@/lib/visits';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assignColors } from '@/lib/calendar-colors';
@@ -15,13 +16,6 @@ import { VisitProvider } from '@/components/guest/visit-context';
 import { SelectableRoomCalendar } from '@/components/guest/selectable-room-calendar';
 import { VisitSidebar } from '@/components/guest/visit-sidebar';
 import { MobileDockedCard } from '@/components/mobile-docked-card';
-import {
-  appendGuestPreviewToPath,
-  isGuestPreviewEnabled,
-  parseGuestPreviewAs,
-  parseGuestPreviewVisitStatus,
-  resolveGuestPreviewUi,
-} from '@/lib/guest-preview';
 import { guestVisitCtaLabel } from '@/lib/invitation-visit';
 import { PhotoMosaic } from '@/components/photo-gallery';
 import { PlaceholderImage } from '@/components/placeholder-image';
@@ -56,37 +50,35 @@ export async function generateMetadata({
 
 export default async function GuestRoomPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ token: string; roomId: string }>;
-  searchParams: Promise<{ preview?: string; as?: string; status?: string }>;
 }) {
   const { token, roomId } = await params;
-  const { preview, as, status } = await searchParams;
   const invitation = await getInvitationByToken(token);
   if (!invitation) notFound();
 
   const room = invitation.rooms.find((r) => r.id === roomId);
   if (!room) notFound();
 
-  const previewMode = isGuestPreviewEnabled(preview);
-  const guestPreviewAs = parseGuestPreviewAs(as);
-  const guestPreviewVisitStatus = parseGuestPreviewVisitStatus(status);
-  const showVisitRequestCalendar =
-    !previewMode || guestPreviewAs !== 'confirmed';
   const active = isInvitationActive(invitation);
   const authUser = await getAuthUser();
   const isAuthenticated =
     !!authUser && authUser.email === invitation.guest_email;
   const property = invitation.property;
 
-  const houseHref = previewMode
-    ? appendGuestPreviewToPath(
-        `/invite/${invitation.token}`,
-        guestPreviewAs,
-        guestPreviewVisitStatus
-      )
-    : `/invite/${invitation.token}`;
+  // Guest surface only — send hosts to their own view of this guest.
+  const isHost = authUser
+    ? await canManageProperty(invitation.property_id, authUser.id)
+    : false;
+  if (isHost) {
+    redirect(
+      invitation.guest_email
+        ? guestProfileHref(property.slug, invitation.guest_email)
+        : `/dashboard/${property.slug}/visits`
+    );
+  }
+
+  const houseHref = `/invite/${invitation.token}`;
 
   const existingVisit =
     isAuthenticated && authUser
@@ -139,14 +131,8 @@ export default async function GuestRoomPage({
     .eq('room_id', roomId)
     .eq('is_blocked', true);
 
-  const showSidebar = active || previewMode || !!existingVisit;
-  const previewUi = resolveGuestPreviewUi(
-    previewMode,
-    guestPreviewAs,
-    isAuthenticated
-  );
-  const isManageVisit =
-    (!previewMode && !!existingVisit) || previewUi.showManageVisit;
+  const showSidebar = active || !!existingVisit;
+  const isManageVisit = !!existingVisit;
   const dock = isManageVisit
     ? {
         ctaLabel: 'View visit',
@@ -154,7 +140,7 @@ export default async function GuestRoomPage({
         idleSubtitle: property.name,
         trackDates: false,
       }
-    : previewUi.showSignIn
+    : !isAuthenticated
       ? {
           ctaLabel: 'Sign in',
           idleTitle: 'Sign in to request a visit',
@@ -183,9 +169,6 @@ export default async function GuestRoomPage({
       room={room}
       isAuthenticated={isAuthenticated}
       existingVisit={existingVisit}
-      previewMode={previewMode}
-      guestPreviewAs={guestPreviewAs}
-      guestPreviewVisitStatus={guestPreviewVisitStatus}
       isPrixFixe={isPrixFixe}
       maxGuests={room.max_occupancy}
       visits={roomVisits}
@@ -202,9 +185,7 @@ export default async function GuestRoomPage({
     ...(room.amenities && room.amenities.length > 0
       ? [{ id: 'amenities', label: 'Amenities' }]
       : []),
-    ...(showVisitRequestCalendar
-      ? [{ id: 'availability', label: 'Availability' }]
-      : []),
+    { id: 'availability', label: 'Availability' },
   ];
 
   return (
@@ -264,11 +245,10 @@ export default async function GuestRoomPage({
               <RoomBedsSection room={room} />
               <RoomAmenitiesSection room={room} />
 
-              {showVisitRequestCalendar && (
-                <section
-                  id="availability"
-                  className="scroll-mt-24 py-10 first:pt-0"
-                >
+              <section
+                id="availability"
+                className="scroll-mt-24 py-10 first:pt-0"
+              >
                   <h2 className="text-2xl font-semibold tracking-tight">
                     Availability
                   </h2>
@@ -285,7 +265,6 @@ export default async function GuestRoomPage({
                     />
                   </div>
                 </section>
-              )}
               </div>
             </div>
 

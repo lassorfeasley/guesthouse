@@ -3,17 +3,22 @@ import { createClient } from '@/lib/supabase/server';
 import { getDashboardProperty } from '@/lib/dashboard-property';
 import { buildGuestRoster, findRosterEntry } from '@/lib/guest-roster';
 import { parseGuestKey } from '@/lib/guest-keys';
+import { getInvitationByToken, inviteUrl } from '@/lib/invitations';
 import { GuestProfileView } from '@/components/dashboard/guest-profile-view';
+import { InviteCreatedDialog } from '@/components/invite/invite-created-dialog';
 import type { Invitation } from '@/types/database';
 
 export const metadata = { title: 'Guest profile' };
 
 export default async function GuestProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; guestKey: string }>;
+  searchParams: Promise<{ created?: string }>;
 }) {
   const { slug, guestKey } = await params;
+  const { created } = await searchParams;
   if (!parseGuestKey(guestKey)) notFound();
 
   const property = await getDashboardProperty(slug);
@@ -58,12 +63,40 @@ export default async function GuestProfilePage({
     avatarUrl = member?.avatar_url ?? null;
   }
 
+  // Just-created invitations land here with `?created=<token>` so the host can
+  // grab the share link without ever seeing the guest-facing invite page.
+  const createdInvitation =
+    created && created === guest.invitation?.token
+      ? await getInvitationByToken(created)
+      : null;
+  const showCreatedDialog =
+    !!createdInvitation && createdInvitation.property_id === property.id;
+
   return (
-    <GuestProfileView
-      guest={guest}
-      slug={slug}
-      today={today}
-      avatarUrl={avatarUrl}
-    />
+    <>
+      <GuestProfileView
+        guest={guest}
+        slug={slug}
+        today={today}
+        avatarUrl={avatarUrl}
+      />
+      {showCreatedDialog && createdInvitation && (
+        <InviteCreatedDialog
+          token={createdInvitation.token}
+          initialUrl={inviteUrl(createdInvitation.token)}
+          propertyName={property.name}
+          guestEmail={createdInvitation.guest_email}
+          guestName={
+            [
+              createdInvitation.guest_first_name,
+              createdInvitation.guest_last_name,
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
+          hasDates={createdInvitation.windows.length > 0}
+        />
+      )}
+    </>
   );
 }

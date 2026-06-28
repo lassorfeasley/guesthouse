@@ -18,11 +18,6 @@ import { GuestManageVisitCard } from '@/components/guest/guest-manage-visit-card
 import { HouseCalendar } from '@/components/guest/house-calendar';
 import { useBareCard } from '@/components/card-chrome';
 import {
-  resolveGuestPreviewUi,
-  type GuestPreviewAs,
-  type GuestPreviewVisitStatus,
-} from '@/lib/guest-preview';
-import {
   guestVisitCtaLabel,
   guestVisitSidebarNote,
   guestVisitSuccessMessage,
@@ -42,9 +37,6 @@ interface HouseVisitSidebarProps {
   isAuthenticated: boolean;
   /** The guest's active visit for this invitation, when one exists. */
   existingVisit?: GuestVisitSummary | null;
-  previewMode?: boolean;
-  guestPreviewAs?: GuestPreviewAs;
-  guestPreviewVisitStatus?: GuestPreviewVisitStatus;
   isPrixFixe?: boolean;
   allowedRanges?: DateRange[];
 }
@@ -99,17 +91,9 @@ export function HouseVisitSidebar({
   propertyName,
   isAuthenticated,
   existingVisit,
-  previewMode = false,
-  guestPreviewAs = 'visit',
-  guestPreviewVisitStatus = 'requested',
   isPrixFixe = false,
   allowedRanges,
 }: HouseVisitSidebarProps) {
-  const previewUi = resolveGuestPreviewUi(
-    previewMode,
-    guestPreviewAs,
-    isAuthenticated
-  );
   const router = useRouter();
   const bare = useBareCard();
   const cardClass = cn(
@@ -177,14 +161,7 @@ export function HouseVisitSidebar({
       invitation_token: invitation.token,
     };
 
-    if (previewMode) {
-      toast.info('Preview mode — no visit was requested', {
-        description: `${formatBox(checkIn)} → ${formatBox(checkOut)} · ${selectedRoomIds.length} room(s) · party of ${guests}`,
-      });
-      return;
-    }
-
-    if (!previewUi.effectiveAuthenticated) {
+    if (!isAuthenticated) {
       toast.error('Please sign in first using the magic link');
       return;
     }
@@ -217,17 +194,9 @@ export function HouseVisitSidebar({
     }
   }
 
-  const sampleCheckIn =
-    checkIn ?? invitation.windows[0]?.start_date ?? '2026-06-10';
-  const sampleCheckOut =
-    checkOut ?? invitation.windows[0]?.end_date ?? '2026-06-15';
-  const manageRoomNames = rooms
-    .filter((r) => selectedRoomIds.includes(r.id))
-    .map((r) => r.name);
-
-  // A real booked guest revisiting the invite page sees their visit — with
-  // add-to-calendar — instead of the visit widget.
-  if (!previewMode && existingVisit) {
+  // A booked guest revisiting the invite page sees their visit — with
+  // add-to-calendar — instead of the visit-request widget.
+  if (existingVisit) {
     return (
       <GuestManageVisitCard
         propertyName={propertyName}
@@ -241,25 +210,7 @@ export function HouseVisitSidebar({
     );
   }
 
-  if (previewUi.showManageVisit) {
-    return (
-      <GuestManageVisitCard
-        propertyName={propertyName}
-        checkIn={sampleCheckIn}
-        checkOut={sampleCheckOut}
-        roomNames={
-          manageRoomNames.length > 0
-            ? manageRoomNames
-            : invitation.rooms.map((r) => r.name)
-        }
-        partySize={guests}
-        visitStatus={guestPreviewVisitStatus}
-        previewMode={previewMode}
-      />
-    );
-  }
-
-  if (previewUi.showSignIn) {
+  if (!isAuthenticated) {
     return (
       <div className={cardClass}>
         <p className="text-lg font-semibold">Sign in to request a visit</p>
@@ -458,11 +409,7 @@ export function HouseVisitSidebar({
         onClick={handleReserve}
         disabled={loading}
       >
-        {loading
-          ? 'Submitting...'
-          : previewMode
-            ? `${ctaLabel} (preview)`
-            : ctaLabel}
+        {loading ? 'Submitting...' : ctaLabel}
       </Button>
 
       <p className="mt-3 text-center text-sm text-muted-foreground">

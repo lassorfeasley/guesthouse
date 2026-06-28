@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   getInvitationByToken,
   guestMatchesInvitation,
   invitationHostName,
-  inviteUrl,
   isInvitationActive,
 } from '@/lib/invitations';
 import { getCoGuestsForInvitation } from '@/lib/coguests';
 import { getGuestVisitForInvitation } from '@/lib/visits';
 import { canManageProperty, getAuthUser } from '@/lib/auth';
+import { guestProfileHref } from '@/lib/guest-keys';
 import { getInvitationRoomAvailability } from '@/lib/guest-availability';
 import { formatDateRange, formatDate } from '@/lib/dates';
 import { PropertySections } from '@/components/property-sections';
@@ -21,17 +21,9 @@ import { VisitProvider } from '@/components/guest/visit-context';
 import { HouseCalendar } from '@/components/guest/house-calendar';
 import { HouseVisitSidebar } from '@/components/guest/house-visit-sidebar';
 import { MobileDockedCard } from '@/components/mobile-docked-card';
-import {
-  appendGuestPreviewToPath,
-  isGuestPreviewEnabled,
-  parseGuestPreviewAs,
-  parseGuestPreviewVisitStatus,
-  resolveGuestPreviewUi,
-} from '@/lib/guest-preview';
 import { guestVisitCtaLabel } from '@/lib/invitation-visit';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CalendarCheck, CalendarRange, MapPin, Sparkles } from 'lucide-react';
-import { InviteCreatedDialog } from '@/components/invite/invite-created-dialog';
+import { CalendarCheck, CalendarRange, MapPin, Sparkles } from 'lucide-react';
 import { RoomCard } from '@/components/room-card';
 import { formatPersonName } from '@/lib/names';
 import {
@@ -65,34 +57,30 @@ export async function generateMetadata({
 
 export default async function InvitePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{
-    preview?: string;
-    as?: string;
-    status?: string;
-    invited?: string;
-  }>;
 }) {
   const { token } = await params;
-  const { preview, as, status, invited } = await searchParams;
   const invitation = await getInvitationByToken(token);
 
   if (!invitation) notFound();
 
-  const previewMode = isGuestPreviewEnabled(preview);
-  const guestPreviewAs = parseGuestPreviewAs(as);
-  const guestPreviewVisitStatus = parseGuestPreviewVisitStatus(status);
-  const showVisitRequestCalendar =
-    !previewMode || guestPreviewAs !== 'confirmed';
   const active = isInvitationActive(invitation);
   const authUser = await getAuthUser();
   const isAuthenticated = guestMatchesInvitation(authUser, invitation);
+
+  // This is the guest's surface. A host who opens it gets sent to their own
+  // single host view of this guest (invitation + visit history) instead.
   const isHost = authUser
     ? await canManageProperty(invitation.property_id, authUser.id)
     : false;
-  const justCreated = isHost && invited === '1';
+  if (isHost) {
+    redirect(
+      invitation.guest_email
+        ? guestProfileHref(invitation.property.slug, invitation.guest_email)
+        : `/dashboard/${invitation.property.slug}/visits`
+    );
+  }
 
   const existingVisit =
     isAuthenticated && authUser
@@ -128,20 +116,13 @@ export default async function InvitePage({
     max_occupancy: r.max_occupancy,
   }));
 
-  const showSidebar = active || previewMode || !!existingVisit;
-  const previewUi = resolveGuestPreviewUi(
-    previewMode,
-    guestPreviewAs,
-    isAuthenticated
-  );
-  const isManageVisit =
-    (!previewMode && !!existingVisit) || previewUi.showManageVisit;
-  // The accepted visit's status, so the page chrome can speak in "visit" terms.
-  const visitStatus: 'requested' | 'approved' | null = existingVisit
-    ? existingVisit.status
-    : previewUi.showManageVisit
-      ? guestPreviewVisitStatus
-      : null;
+  const showSidebar = active || !!existingVisit;
+  // Once the guest has a visit, the page speaks in "visit" terms instead of
+  // "invitation" terms — this is the single guest surface evolving through the
+  // visit lifecycle, not a separate page.
+  const isManageVisit = !!existingVisit;
+  const visitStatus: 'requested' | 'approved' | null =
+    existingVisit?.status ?? null;
   const dock = isManageVisit
     ? {
         ctaLabel: 'View visit',
@@ -149,7 +130,7 @@ export default async function InvitePage({
         idleSubtitle: property.name,
         trackDates: false,
       }
-    : previewUi.showSignIn
+    : !isAuthenticated
       ? {
           ctaLabel: 'Sign in',
           idleTitle: 'Sign in to request a visit',
@@ -170,9 +151,6 @@ export default async function InvitePage({
       propertyName={property.name}
       isAuthenticated={isAuthenticated}
       existingVisit={existingVisit}
-      previewMode={previewMode}
-      guestPreviewAs={guestPreviewAs}
-      guestPreviewVisitStatus={guestPreviewVisitStatus}
       isPrixFixe={isPrixFixe}
       allowedRanges={allowedRanges}
     />
@@ -206,17 +184,6 @@ export default async function InvitePage({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6">
-        {/* Host-only: this is a guest-facing page, so give hosts a way back. */}
-        {isHost && (
-          <Link
-            href={`/dashboard/${property.slug}/visits`}
-            className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to visits
-          </Link>
-        )}
-
         {/* Headline — flips from invitation to visit once the guest has accepted */}
         <h1 className="mb-8 max-w-4xl break-words text-3xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
           {isManageVisit ? (
@@ -380,9 +347,7 @@ export default async function InvitePage({
                     </p>
                   ))}
 
-                {(active || previewMode) &&
-                  showVisitRequestCalendar &&
-                  !isManageVisit && (
+                {active && !isManageVisit && (
                   <div className="mt-8">
                     <HouseCalendar
                       allowedRanges={allowedRanges}
@@ -402,15 +367,7 @@ export default async function InvitePage({
                   {invitation.rooms.map((room) => (
                     <Link
                       key={room.id}
-                      href={
-                        previewMode
-                          ? appendGuestPreviewToPath(
-                              `/invite/${invitation.token}/rooms/${room.id}`,
-                              guestPreviewAs,
-                              guestPreviewVisitStatus
-                            )
-                          : `/invite/${invitation.token}/rooms/${room.id}`
-                      }
+                      href={`/invite/${invitation.token}/rooms/${room.id}`}
                       className="group block"
                     >
                       <RoomCard room={room} showDescription />
@@ -471,21 +428,6 @@ export default async function InvitePage({
       </div>
 
       <SiteFooter name={property.name} />
-
-      {justCreated && (
-        <InviteCreatedDialog
-          token={invitation.token}
-          initialUrl={inviteUrl(invitation.token)}
-          propertyName={property.name}
-          guestEmail={invitation.guest_email}
-          guestName={
-            [invitation.guest_first_name, invitation.guest_last_name]
-              .filter(Boolean)
-              .join(' ') || undefined
-          }
-          hasDates={invitation.windows.length > 0}
-        />
-      )}
     </div>
   );
 }

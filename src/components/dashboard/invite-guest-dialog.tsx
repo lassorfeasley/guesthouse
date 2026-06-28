@@ -360,8 +360,10 @@ export function InviteGuestDialog({
     }
     setOpen(false);
     resetForm();
-    if (!data.preApproved && data.invitation?.token) {
-      router.push(`/invite/${data.invitation.token}?invited=1`);
+    if (propertySlug && !data.preApproved && data.invitation?.token) {
+      router.push(
+        `${guestProfileHref(propertySlug, formValues.guest_email)}?created=${data.invitation.token}`
+      );
     } else if (propertySlug) {
       router.push(guestProfileHref(propertySlug, formValues.guest_email));
     }

@@ -97,11 +97,6 @@ export function GuestProfileView({
             invitationId={guest.invitation?.id}
             invitationStatus={guest.invitation?.status}
             manualVisitId={upcomingManualId}
-            invitePageHref={
-              guest.invitation?.token
-                ? `/invite/${guest.invitation.token}`
-                : undefined
-            }
           />
         }
       />

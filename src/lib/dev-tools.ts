@@ -1,6 +1,3 @@
-import type { GuestPreviewAs, GuestPreviewVisitStatus } from '@/lib/guest-preview';
-import { guestPreviewQuery } from '@/lib/guest-preview';
-
 export type AppView = 'landing' | 'guest' | 'host' | 'admin';
 
 export function isDevToolsEnabled(): boolean {
@@ -34,12 +31,8 @@ export function extractPropertySlug(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
-export function buildGuestDevPath(
-  token: string,
-  as: GuestPreviewAs = 'visit',
-  status?: GuestPreviewVisitStatus
-): string {
-  return `/invite/${token}?${guestPreviewQuery(as, status)}`;
+export function buildGuestDevPath(token: string): string {
+  return `/invite/${token}`;
 }
 
 export function buildHostDevPath(slug?: string | null): string {

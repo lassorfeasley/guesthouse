@@ -1,12 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Copy, Eye, ExternalLink } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { getInviteUrl } from '@/lib/invite-url';
-import { guestPreviewQuery } from '@/lib/guest-preview';
 import { CancelHostVisitButton } from '@/components/dashboard/cancel-host-visit-button';
 
 interface GuestProfileActionsProps {
@@ -14,7 +12,6 @@ interface GuestProfileActionsProps {
   invitationId?: string | null;
   invitationStatus?: string;
   manualVisitId?: string | null;
-  invitePageHref?: string;
 }
 
 export function GuestProfileActions({
@@ -22,10 +19,8 @@ export function GuestProfileActions({
   invitationId,
   invitationStatus,
   manualVisitId,
-  invitePageHref,
 }: GuestProfileActionsProps) {
   const router = useRouter();
-  const isDev = process.env.NODE_ENV !== 'production';
 
   function copyLink() {
     if (!invitationToken) return;
@@ -53,32 +48,12 @@ export function GuestProfileActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {invitePageHref && (
-        <Button variant="outline" size="sm" asChild>
-          <Link href={invitePageHref} target="_blank">
-            <ExternalLink className="mr-1 h-4 w-4" />
-            Open invite page
-          </Link>
-        </Button>
-      )}
       {invitationToken && invitationStatus !== 'revoked' && (
         <>
           <Button variant="outline" size="sm" onClick={copyLink}>
             <Copy className="mr-1 h-4 w-4" />
             Copy invite link
           </Button>
-          {isDev && (
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={`${getInviteUrl(invitationToken)}?${guestPreviewQuery('visit')}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Eye className="mr-1 h-4 w-4" />
-                Preview visit
-              </a>
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"

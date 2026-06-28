@@ -38,13 +38,13 @@ export function InviteCreatedDialog({
   const [copied, setCopied] = useState(false);
 
   // Prefer the live origin once mounted so the shared link matches the host's
-  // current host/port, and drop the ?invited flag so a refresh won't reopen.
+  // current host/port, and drop the ?created flag so a refresh won't reopen.
   useEffect(() => {
     setUrl(getInviteUrl(token));
     if (typeof window !== 'undefined') {
       const next = new URL(window.location.href);
-      if (next.searchParams.has('invited')) {
-        next.searchParams.delete('invited');
+      if (next.searchParams.has('created')) {
+        next.searchParams.delete('created');
         window.history.replaceState(null, '', next.toString());
       }
     }

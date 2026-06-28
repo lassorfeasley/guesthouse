@@ -2,19 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { ChevronRight, ExternalLink, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import devAccounts from '@/lib/dev-accounts.json';
-import {
-  type GuestPreviewAs,
-  type GuestPreviewVisitStatus,
-  isGuestPreviewEnabled,
-  parseGuestPreviewAs,
-  parseGuestPreviewVisitStatus,
-} from '@/lib/guest-preview';
+import { DevImpersonateControls } from '@/components/dev/dev-impersonate-controls';
 import {
   type AppView,
   ADMIN_DEV_PATH,
@@ -43,17 +34,6 @@ const APP_VIEWS: { id: AppView; label: string }[] = [
   { id: 'guest', label: 'Guest' },
   { id: 'host', label: 'Host' },
   { id: 'admin', label: 'Admin' },
-];
-
-const GUEST_STATES: { id: GuestPreviewAs; label: string }[] = [
-  { id: 'signed-out', label: 'Before sign-in' },
-  { id: 'visit', label: 'Visit' },
-  { id: 'confirmed', label: 'Manage visit' },
-];
-
-const VISIT_STATUSES: { id: GuestPreviewVisitStatus; label: string }[] = [
-  { id: 'requested', label: 'Requested' },
-  { id: 'approved', label: 'Approved' },
 ];
 
 function SegmentTabs<T extends string>({
@@ -95,83 +75,12 @@ function SegmentTabs<T extends string>({
   );
 }
 
-const PERSONA_DESTINATIONS: Record<string, string> = {
-  owner: '/dashboard',
-  admin: '/admin',
-  guest: '/my-visits',
-};
-
-function DevAuthControls() {
-  const router = useRouter();
-  const [pending, setPending] = useState<string | null>(null);
-
-  async function signInAs(email: string, persona: string) {
-    setPending(persona);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: devAccounts.password,
-    });
-    setPending(null);
-    if (error) {
-      toast.error(
-        `Sign in failed: ${error.message}. Have you run "npm run db:seed:dev"?`
-      );
-      return;
-    }
-    router.push(PERSONA_DESTINATIONS[persona] ?? '/');
-    router.refresh();
-  }
-
-  async function signOut() {
-    setPending('out');
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setPending(null);
-    router.push('/?preview=1');
-    router.refresh();
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-zinc-700/80 pt-2">
-      <span className="text-xs text-zinc-400">Sign in as:</span>
-      {devAccounts.accounts.map((acct) => (
-        <button
-          key={acct.persona}
-          type="button"
-          disabled={pending !== null}
-          onClick={() => signInAs(acct.email, acct.persona)}
-          className="rounded-md bg-black/20 px-3 py-1.5 text-xs font-medium text-white/80 transition-colors hover:text-white disabled:opacity-50"
-        >
-          {pending === acct.persona ? '…' : acct.label}
-        </button>
-      ))}
-      <button
-        type="button"
-        disabled={pending !== null}
-        onClick={signOut}
-        className="ml-auto rounded-md px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
-      >
-        {pending === 'out' ? 'Signing out…' : 'Sign out'}
-      </button>
-    </div>
-  );
-}
-
 export function DevToolbar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const currentView = detectAppView(pathname);
-  const guestPreview = isGuestPreviewEnabled(searchParams.get('preview') ?? undefined);
-  const guestAs = parseGuestPreviewAs(searchParams.get('as') ?? undefined);
-  const guestStatus = parseGuestPreviewVisitStatus(
-    searchParams.get('status') ?? undefined
-  );
-  const showGuestSubControls =
-    currentView === 'guest' && pathname.startsWith('/invite/') && guestPreview;
 
   const inviteToken =
     extractInviteToken(pathname) ?? getStoredInviteToken();
@@ -180,13 +89,11 @@ export function DevToolbar() {
   const viewHrefs = useMemo(
     () => ({
       landing: LANDING_DEV_PATH,
-      guest: inviteToken
-        ? buildGuestDevPath(inviteToken, guestAs, guestStatus)
-        : '/my-visits',
+      guest: inviteToken ? buildGuestDevPath(inviteToken) : '/my-visits',
       host: buildHostDevPath(propertySlug),
       admin: ADMIN_DEV_PATH,
     }),
-    [inviteToken, guestAs, guestStatus, propertySlug]
+    [inviteToken, propertySlug]
   );
 
   useEffect(() => {
@@ -247,7 +154,7 @@ export function DevToolbar() {
               Dev tools
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Admin preview — sign in required
+              Local only — impersonate any account
             </p>
           </div>
           <button
@@ -308,58 +215,7 @@ export function DevToolbar() {
             </div>
           </div>
 
-          <DevAuthControls />
-
-          {showGuestSubControls && (
-            <div className="space-y-2 border-t border-zinc-700/80 pt-4">
-              <p className="text-xs text-zinc-400">Guest UI</p>
-              <SegmentTabs
-                items={GUEST_STATES}
-                value={guestAs}
-                getHref={(as) =>
-                  inviteToken
-                    ? buildGuestDevPath(inviteToken, as, guestStatus)
-                    : '/my-visits'
-                }
-                ariaLabel="Guest preview state"
-                activeClassName="bg-amber-400 text-amber-950 shadow-sm"
-              />
-              {guestAs === 'confirmed' && (
-                <SegmentTabs
-                  items={VISIT_STATUSES}
-                  value={guestStatus}
-                  getHref={(status) =>
-                    inviteToken
-                      ? buildGuestDevPath(inviteToken, 'confirmed', status)
-                      : '/my-visits'
-                  }
-                  ariaLabel="Visit status preview"
-                  activeClassName="bg-amber-300 text-amber-950 shadow-sm"
-                />
-              )}
-              <p className="text-xs text-zinc-500">
-                Guest preview — no submissions
-              </p>
-            </div>
-          )}
-
-          {currentView === 'guest' &&
-            pathname.startsWith('/invite/') &&
-            !guestPreview && (
-              <p className="border-t border-zinc-700/80 pt-4 text-xs text-zinc-400">
-                Open guest preview:{' '}
-                <Link
-                  href={
-                    inviteToken
-                      ? buildGuestDevPath(inviteToken, 'visit')
-                      : '/my-visits'
-                  }
-                  className="font-medium text-amber-400 underline underline-offset-2"
-                >
-                  enable preview mode
-                </Link>
-              </p>
-            )}
+          <DevImpersonateControls />
         </div>
       </aside>
     </>

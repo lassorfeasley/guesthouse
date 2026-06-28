@@ -202,7 +202,9 @@ function HostComposeForm({
       toast.success('Invitation sent!');
     }
     if (data.invitation?.token) {
-      router.push(`/invite/${data.invitation.token}?invited=1`);
+      router.push(
+        `${guestProfileHref(slug, guestEmail.trim())}?created=${data.invitation.token}`
+      );
     } else {
       router.push(guestProfileHref(slug, guestEmail.trim()));
     }

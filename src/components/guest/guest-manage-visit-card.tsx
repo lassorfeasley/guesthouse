@@ -1,18 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useBareCard } from '@/components/card-chrome';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { VisitSummaryList } from '@/components/visit-summary-list';
 import { AddToCalendarButton } from '@/components/add-to-calendar-button';
-import type { GuestPreviewVisitStatus } from '@/lib/guest-preview';
+
+type GuestVisitStatus = 'requested' | 'approved';
 
 const statusVariant: Record<
-  GuestPreviewVisitStatus,
+  GuestVisitStatus,
   'default' | 'secondary' | 'destructive' | 'outline'
 > = {
   requested: 'secondary',
@@ -25,10 +24,9 @@ interface GuestManageVisitCardProps {
   checkOut: string;
   roomNames: string[];
   partySize: number;
-  visitStatus: GuestPreviewVisitStatus;
+  visitStatus: GuestVisitStatus;
   /** Real visit id — enables the live add-to-calendar menu. */
   visitId?: string;
-  previewMode?: boolean;
 }
 
 export function GuestManageVisitCard({
@@ -39,7 +37,6 @@ export function GuestManageVisitCard({
   partySize,
   visitStatus,
   visitId,
-  previewMode = false,
 }: GuestManageVisitCardProps) {
   const bare = useBareCard();
   return (
@@ -80,46 +77,27 @@ export function GuestManageVisitCard({
         <Button variant="outline" className="w-full" asChild>
           <Link href="/my-visits">View all visits</Link>
         </Button>
-        {visitStatus === 'approved' &&
-          (visitId ? (
-            <AddToCalendarButton
-              visitId={visitId}
-              size="default"
-              className="w-full"
-            />
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() =>
-                toast.info('Preview mode — calendar download disabled')
-              }
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Add to calendar
-            </Button>
-          ))}
+        {visitStatus === 'approved' && visitId && (
+          <AddToCalendarButton
+            visitId={visitId}
+            size="default"
+            className="w-full"
+          />
+        )}
         {(visitStatus === 'requested' || visitStatus === 'approved') && (
           <Button
             type="button"
             variant="ghost"
             className="w-full text-destructive hover:text-destructive"
-            onClick={() => {
-              if (previewMode) {
-                toast.info('Preview mode — cancel visit disabled');
-              }
-            }}
+            asChild
           >
-            Cancel visit
+            <Link href="/my-visits">Cancel visit</Link>
           </Button>
         )}
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        {previewMode
-          ? 'Preview of post-visit management UI'
-          : 'Manage your visit from My visits'}
+        Manage your visit from My visits
       </p>
     </div>
   );

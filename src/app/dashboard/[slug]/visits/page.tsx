@@ -56,7 +56,7 @@ export default async function VisitsPage({
       guest:users!guest_user_id(name, email, avatar_url),
       dates:visit_dates(check_in, check_out),
       visit_rooms(room:rooms(name)),
-      invitation:invitations(token)
+      invitation:invitations(token, guest_name, guest_first_name, guest_last_name, guest_email)
     `
     )
     .eq('property_id', property.id)
@@ -89,19 +89,30 @@ export default async function VisitsPage({
       const guest = (Array.isArray(b.guest) ? b.guest[0] : b.guest) as
         | { name: string | null; email: string; avatar_url: string | null }
         | null;
+      const inv = Array.isArray(b.invitation) ? b.invitation[0] : b.invitation;
+      // Invite-flow visits store only guest_user_id, and RLS hides the guest's
+      // users row from the host — so the guest's name/email come off the
+      // invitation (which the host can read) rather than the user join.
+      const invName =
+        inv?.guest_name ||
+        [inv?.guest_first_name, inv?.guest_last_name]
+          .filter(Boolean)
+          .join(' ') ||
+        null;
       const guestName =
         guest?.name ??
         b.guest_name ??
+        invName ??
         guest?.email?.split('@')[0] ??
         b.guest_email?.split('@')[0] ??
+        inv?.guest_email?.split('@')[0] ??
         'Guest';
       const rooms =
         b.visit_rooms?.map((br) => {
           const room = Array.isArray(br.room) ? br.room[0] : br.room;
           return room?.name ?? 'Room';
         }) ?? [];
-      const inv = Array.isArray(b.invitation) ? b.invitation[0] : b.invitation;
-      const email = guest?.email ?? b.guest_email ?? null;
+      const email = guest?.email ?? b.guest_email ?? inv?.guest_email ?? null;
       return {
         id: b.id,
         guestName,

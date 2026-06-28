@@ -72,7 +72,7 @@ export default async function OverviewPage({
   const { data: visits } = await supabase
     .from('visits')
     .select(
-      `id, status, invitation_id, guest_name, guest_email, relationship, guest:users!guest_user_id(name, email, avatar_url), dates:visit_dates(check_in, check_out)`
+      `id, status, invitation_id, guest_name, guest_email, relationship, guest:users!guest_user_id(name, email, avatar_url), invitation:invitations(guest_name, guest_first_name, guest_last_name, guest_email), dates:visit_dates(check_in, check_out)`
     )
     .eq('property_id', property.id)
     .in('status', ['approved', 'requested']);
@@ -82,13 +82,29 @@ export default async function OverviewPage({
     const guest = (Array.isArray(b.guest) ? b.guest[0] : b.guest) as
       | { name: string | null; email: string; avatar_url: string | null }
       | null;
+    const inv = (Array.isArray(b.invitation) ? b.invitation[0] : b.invitation) as
+      | {
+          guest_name: string | null;
+          guest_first_name: string | null;
+          guest_last_name: string | null;
+          guest_email: string | null;
+        }
+      | null;
+    // RLS hides the guest's users row from the host, so invite-flow visits fall
+    // back to the invitation (which the host can read) for the guest's name.
+    const invName =
+      inv?.guest_name ||
+      [inv?.guest_first_name, inv?.guest_last_name].filter(Boolean).join(' ') ||
+      null;
     const guestName =
       guest?.name ??
-      guest?.email?.split('@')[0] ??
       b.guest_name ??
+      invName ??
+      guest?.email?.split('@')[0] ??
       b.guest_email?.split('@')[0] ??
+      inv?.guest_email?.split('@')[0] ??
       'Guest';
-    const email = guest?.email ?? b.guest_email ?? null;
+    const email = guest?.email ?? b.guest_email ?? inv?.guest_email ?? null;
     return {
       id: b.id,
       status: b.status,
