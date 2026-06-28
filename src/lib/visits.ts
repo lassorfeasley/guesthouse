@@ -133,6 +133,55 @@ export async function getGuestVisitForInvitation(
 }
 
 /**
+ * The active visit for an invitation, regardless of which guest it belongs to.
+ * Used on the host's view of the invite page so it can reflect "accepted" and
+ * link through to the visit, without needing the guest's user id.
+ */
+export async function getVisitForInvitation(
+  invitationId: string
+): Promise<GuestVisitSummary | null> {
+  const admin = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await admin
+    .from('visits')
+    .select(
+      `
+      id,
+      status,
+      party_size,
+      dates:visit_dates(check_in, check_out),
+      visit_rooms(room:rooms(name))
+    `
+    )
+    .eq('invitation_id', invitationId)
+    .in('status', ['requested', 'approved']);
+
+  const visits: GuestVisitSummary[] = [];
+  for (const v of data ?? []) {
+    const dates = Array.isArray(v.dates) ? v.dates[0] : v.dates;
+    if (!dates || dates.check_out < today) continue;
+    visits.push({
+      id: v.id,
+      status: v.status as 'requested' | 'approved',
+      checkIn: dates.check_in,
+      checkOut: dates.check_out,
+      roomNames:
+        v.visit_rooms?.map(
+          (br: { room: { name: string } | { name: string }[] }) => {
+            const room = Array.isArray(br.room) ? br.room[0] : br.room;
+            return room.name;
+          }
+        ) ?? [],
+      partySize: v.party_size,
+    });
+  }
+
+  visits.sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+  return visits[0] ?? null;
+}
+
+/**
  * Every approved (confirmed) visit at a property, shaped for the calendar feed.
  * Past visits are kept so subscribers retain history; calendar apps cope fine.
  */

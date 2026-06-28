@@ -1,16 +1,28 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   getInvitationByToken,
   guestMatchesInvitation,
   invitationHostName,
+  inviteUrl,
   isInvitationActive,
 } from '@/lib/invitations';
 import { getCoGuestsForInvitation } from '@/lib/coguests';
-import { getGuestVisitForInvitation } from '@/lib/visits';
-import { canManageProperty, getAuthUser } from '@/lib/auth';
-import { guestProfileHref } from '@/lib/guest-keys';
+import {
+  getGuestVisitForInvitation,
+  getVisitForInvitation,
+} from '@/lib/visits';
+import {
+  canManageProperty,
+  getAuthUser,
+  getCurrentUser,
+  getOwnerProperties,
+} from '@/lib/auth';
+import { isSiteAdmin } from '@/lib/site-admin';
+import { DashboardTopNav } from '@/components/dashboard/top-nav';
+import { HostVisitSidebar } from '@/components/guest/host-visit-sidebar';
 import { getInvitationRoomAvailability } from '@/lib/guest-availability';
 import { formatDateRange, formatDate } from '@/lib/dates';
 import { PropertySections } from '@/components/property-sections';
@@ -27,6 +39,7 @@ import { CalendarCheck, CalendarRange, MapPin, Sparkles } from 'lucide-react';
 import { RoomCard } from '@/components/room-card';
 import { formatPersonName } from '@/lib/names';
 import {
+  INVITATION_TYPE_DESCRIPTIONS,
   INVITATION_TYPE_GUEST_DESCRIPTIONS,
   INVITATION_TYPE_HEADLINE_PHRASE,
   INVITATION_TYPE_LABELS,
@@ -69,23 +82,17 @@ export default async function InvitePage({
   const authUser = await getAuthUser();
   const isAuthenticated = guestMatchesInvitation(authUser, invitation);
 
-  // This is the guest's surface. A host who opens it gets sent to their own
-  // single host view of this guest (invitation + visit history) instead.
+  // A host viewing this link gets their own view of the visit page: the same
+  // content the guest sees, but with host controls (share, status, manage).
   const isHost = authUser
     ? await canManageProperty(invitation.property_id, authUser.id)
     : false;
-  if (isHost) {
-    redirect(
-      invitation.guest_email
-        ? guestProfileHref(invitation.property.slug, invitation.guest_email)
-        : `/dashboard/${invitation.property.slug}/visits`
-    );
-  }
 
   const existingVisit =
     isAuthenticated && authUser
       ? await getGuestVisitForInvitation(invitation.id, authUser.id)
       : null;
+  const hostVisit = isHost ? await getVisitForInvitation(invitation.id) : null;
 
   const coguests = await getCoGuestsForInvitation(
     invitation.property_id,
@@ -116,36 +123,74 @@ export default async function InvitePage({
     max_occupancy: r.max_occupancy,
   }));
 
-  const showSidebar = active || !!existingVisit;
+  // Hosts always get their sidebar (even on an expired/inactive invite, so they
+  // can still see status and revoke); guests only when there's something to do.
+  const showSidebar = isHost || active || !!existingVisit;
   // Once the guest has a visit, the page speaks in "visit" terms instead of
   // "invitation" terms — this is the single guest surface evolving through the
-  // visit lifecycle, not a separate page.
-  const isManageVisit = !!existingVisit;
+  // visit lifecycle, not a separate page. Hosts keep the invitation framing.
+  const isManageVisit = !isHost && !!existingVisit;
   const visitStatus: 'requested' | 'approved' | null =
     existingVisit?.status ?? null;
-  const dock = isManageVisit
+  const dock = isHost
     ? {
-        ctaLabel: 'View visit',
-        idleTitle: 'Your visit',
+        ctaLabel: 'Share invitation',
+        idleTitle: 'Share invitation',
         idleSubtitle: property.name,
         trackDates: false,
       }
-    : !isAuthenticated
+    : isManageVisit
       ? {
-          ctaLabel: 'Sign in',
-          idleTitle: 'Sign in to request a visit',
-          idleSubtitle: 'Magic link to your invited email',
+          ctaLabel: 'View visit',
+          idleTitle: 'Your visit',
+          idleSubtitle: property.name,
           trackDates: false,
         }
-      : {
-          ctaLabel: guestVisitCtaLabel(invitation),
-          idleTitle: 'Add your dates',
-          idleSubtitle: isPrixFixe
-            ? 'Fixed-date visit'
-            : 'Choose when you’ll arrive',
-          trackDates: true,
-        };
-  const houseVisitSidebar = (
+      : !isAuthenticated
+        ? {
+            ctaLabel: 'Sign in',
+            idleTitle: 'Sign in to request a visit',
+            idleSubtitle: 'Magic link to your invited email',
+            trackDates: false,
+          }
+        : {
+            ctaLabel: guestVisitCtaLabel(invitation),
+            idleTitle: 'Add your dates',
+            idleSubtitle: isPrixFixe
+              ? 'Fixed-date visit'
+              : 'Choose when you’ll arrive',
+            trackDates: true,
+          };
+  const visitSidebar = isHost ? (
+    <HostVisitSidebar
+      slug={property.slug}
+      inviteUrl={inviteUrl(invitation.token)}
+      invitationId={invitation.id}
+      invitationStatus={invitation.status}
+      propertyName={property.name}
+      guestName={
+        [invitation.guest_first_name, invitation.guest_last_name]
+          .filter(Boolean)
+          .join(' ') || null
+      }
+      guestEmail={invitation.guest_email}
+      windows={invitation.windows.map((w) => ({
+        start: w.start_date,
+        end: w.end_date,
+      }))}
+      roomNames={invitation.rooms.map((r) => r.name)}
+      visit={
+        hostVisit
+          ? {
+              id: hostVisit.id,
+              status: hostVisit.status,
+              checkIn: hostVisit.checkIn,
+              checkOut: hostVisit.checkOut,
+            }
+          : null
+      }
+    />
+  ) : (
     <HouseVisitSidebar
       invitation={invitation}
       propertyName={property.name}
@@ -157,8 +202,11 @@ export default async function InvitePage({
   );
 
   const typeLabel = INVITATION_TYPE_LABELS[invitation.type];
-  const typeDescription =
-    INVITATION_TYPE_GUEST_DESCRIPTIONS[invitation.type];
+  // Hosts read about how the invitation behaves ("They can request…"); guests
+  // read the second-person version ("Request any available dates…").
+  const typeDescription = isHost
+    ? INVITATION_TYPE_DESCRIPTIONS[invitation.type]
+    : INVITATION_TYPE_GUEST_DESCRIPTIONS[invitation.type];
 
   const TypeIcon =
     invitation.type === 'standing'
@@ -181,12 +229,50 @@ export default async function InvitePage({
   const inviteTypeWord = INVITATION_TYPE_HEADLINE_PHRASE[invitation.type];
   const inviteArticle = invitation.type === 'standing' ? 'an' : 'a';
 
+  const guestDisplayName =
+    [invitation.guest_first_name, invitation.guest_last_name]
+      .filter(Boolean)
+      .join(' ') ||
+    invitation.guest_email ||
+    'your guest';
+
+  // Hosts viewing their own link get the dashboard nav bar so this reads as part
+  // of the host app rather than a standalone guest page.
+  let hostNav: ReactNode = null;
+  if (isHost && authUser) {
+    const [hostProperties, currentUser] = await Promise.all([
+      getOwnerProperties(authUser.id),
+      getCurrentUser(),
+    ]);
+    const hostCurrentProperty = hostProperties.find(
+      (p) => p.id === invitation.property_id
+    );
+    if (hostCurrentProperty) {
+      hostNav = (
+        <DashboardTopNav
+          properties={hostProperties}
+          currentProperty={hostCurrentProperty}
+          userEmail={authUser.email ?? undefined}
+          userId={authUser.id}
+          showAdminLink={currentUser ? isSiteAdmin(currentUser) : false}
+        />
+      );
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {hostNav}
       <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6">
-        {/* Headline — flips from invitation to visit once the guest has accepted */}
+        {/* Headline — host sees who they invited; guest sees the invitation/visit */}
         <h1 className="mb-8 max-w-4xl break-words text-3xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-          {isManageVisit ? (
+          {isHost ? (
+            <>
+              You invited{' '}
+              <span className="text-muted-foreground">{guestDisplayName}</span>{' '}
+              to {property.name}.
+            </>
+          ) : isManageVisit ? (
             visitStatus === 'approved' ? (
               <>
                 You&apos;re visiting{' '}
@@ -249,15 +335,27 @@ export default async function InvitePage({
         >
           <div className="mt-8 grid gap-x-12 gap-y-12 lg:grid-cols-[1fr_360px]">
             <div className="min-w-0">
-              <PersonCard
-                name={hostName}
-                imageUrl={host?.avatar_url ?? null}
-                seed={host?.email}
-                role={`Your host at ${property.name}`}
-                email={host?.email}
-                size="md"
-                className="mb-6"
-              />
+              {isHost ? (
+                <PersonCard
+                  name={guestDisplayName}
+                  imageUrl={null}
+                  seed={invitation.guest_email ?? undefined}
+                  role={`Invited to ${property.name}`}
+                  email={invitation.guest_email ?? undefined}
+                  size="md"
+                  className="mb-6"
+                />
+              ) : (
+                <PersonCard
+                  name={hostName}
+                  imageUrl={host?.avatar_url ?? null}
+                  seed={host?.email}
+                  role={`Your host at ${property.name}`}
+                  email={host?.email}
+                  size="md"
+                  className="mb-6"
+                />
+              )}
 
               {/* Status summary once accepted, otherwise the invitation type */}
               {isManageVisit ? (
@@ -327,7 +425,11 @@ export default async function InvitePage({
               {/* Available dates */}
               <section className="py-10 first:pt-0">
                 <h2 className="text-2xl font-semibold tracking-tight">
-                  {isManageVisit ? 'Your dates' : 'Available dates'}
+                  {isHost
+                    ? 'Invited dates'
+                    : isManageVisit
+                      ? 'Your dates'
+                      : 'Available dates'}
                 </h2>
                 {invitation.type !== 'standing' &&
                   (invitation.windows.length > 0 ? (
@@ -343,11 +445,13 @@ export default async function InvitePage({
                     </ul>
                   ) : (
                     <p className="mt-2 text-base text-muted-foreground">
-                      Contact your host for date details.
+                      {isHost
+                        ? 'No specific dates set — the guest can request any available dates.'
+                        : 'Contact your host for date details.'}
                     </p>
                   ))}
 
-                {active && !isManageVisit && (
+                {active && !isManageVisit && !isHost && (
                   <div className="mt-8">
                     <HouseCalendar
                       allowedRanges={allowedRanges}
@@ -361,7 +465,11 @@ export default async function InvitePage({
               {/* Rooms available to you */}
               <section className="py-10">
                 <h2 className="text-2xl font-semibold tracking-tight">
-                  {isManageVisit ? 'Your rooms' : 'Rooms available to you'}
+                  {isHost
+                    ? 'Rooms offered'
+                    : isManageVisit
+                      ? 'Your rooms'
+                      : 'Rooms available to you'}
                 </h2>
                 <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-2">
                   {invitation.rooms.map((room) => (
@@ -379,6 +487,7 @@ export default async function InvitePage({
               <PropertySections
                 property={property}
                 showWifi={existingVisit?.status === 'approved'}
+                audience={isHost ? 'host' : 'guest'}
               />
 
               {/* Who's staying */}
@@ -388,7 +497,9 @@ export default async function InvitePage({
                 </h2>
                 {coguests.visible.length === 0 && !coguests.hasHidden ? (
                   <p className="mt-6 text-base text-muted-foreground">
-                    No other confirmed guests during your dates yet.
+                    {isHost
+                      ? 'No other confirmed guests during these dates yet.'
+                      : 'No other confirmed guests during your dates yet.'}
                   </p>
                 ) : (
                   <p className="mt-6 text-base">
@@ -405,7 +516,7 @@ export default async function InvitePage({
 
             <aside className="hidden lg:sticky lg:top-8 lg:block lg:self-start">
               {showSidebar ? (
-                houseVisitSidebar
+                visitSidebar
               ) : (
                 <div className="rounded-2xl border p-6 text-center text-sm text-muted-foreground">
                   This invitation is no longer active.
@@ -421,7 +532,7 @@ export default async function InvitePage({
               idleSubtitle={dock.idleSubtitle}
               trackDates={dock.trackDates}
             >
-              {houseVisitSidebar}
+              {visitSidebar}
             </MobileDockedCard>
           )}
         </VisitProvider>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -49,8 +49,6 @@ import {
   INVITATION_TYPE_LABELS,
   INVITATION_TYPE_OPTIONS,
 } from '@/lib/invitation-types';
-import { guestProfileHref } from '@/lib/guest-keys';
-
 interface InviteGuestDialogProps {
   propertyId: string;
   rooms: Room[];
@@ -81,8 +79,6 @@ export function InviteGuestDialog({
   trigger,
 }: InviteGuestDialogProps) {
   const router = useRouter();
-  const params = useParams();
-  const propertySlug = typeof params.slug === 'string' ? params.slug : undefined;
   const parentVisit = useOptionalVisit();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'invite' | 'manual'>('invite');
@@ -360,12 +356,8 @@ export function InviteGuestDialog({
     }
     setOpen(false);
     resetForm();
-    if (propertySlug && !data.preApproved && data.invitation?.token) {
-      router.push(
-        `${guestProfileHref(propertySlug, formValues.guest_email)}?created=${data.invitation.token}`
-      );
-    } else if (propertySlug) {
-      router.push(guestProfileHref(propertySlug, formValues.guest_email));
+    if (data.invitation?.token) {
+      router.push(`/invite/${data.invitation.token}`);
     }
     router.refresh();
   }
@@ -501,25 +493,6 @@ export function InviteGuestDialog({
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="relationship"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Relationship (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g. College friend, Aunt, Coworker"
-                        {...field}
-                      />
-                    </FormControl>
-                    <p className="text-sm text-muted-foreground">
-                      How you know them — shown on their guest profile.
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           )}
 

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Check,
   Link2,
+  Mail,
+  MessageSquareText,
   Search,
   Share2,
   SlidersHorizontal,
@@ -36,7 +38,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { getInviteUrl } from '@/lib/invite-url';
-import { guestProfileHref } from '@/lib/guest-keys';
 import { PersonAvatar } from '@/components/ui/person-avatar';
 import { isLimitReachedResponse } from '@/lib/billing-client';
 import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
@@ -86,6 +87,7 @@ interface VisitsHubProps {
   initialTab: VisitTab;
   visits: VisitItem[];
   invites: InviteItem[];
+  propertyName?: string | null;
 }
 
 const TAB_ORDER: VisitTab[] = [
@@ -98,11 +100,11 @@ const TAB_ORDER: VisitTab[] = [
 ];
 const TAB_LABEL: Record<VisitTab, string> = {
   all: 'All',
-  invited: 'Invite sent',
+  invited: 'Awaiting reply',
   requested: 'Dates requested',
   upcoming: 'Scheduled',
   past: 'Past visits',
-  cancelled: 'Cancelled',
+  cancelled: 'Inactive',
 };
 
 function matchesQuery(query: string, ...fields: (string | null | undefined)[]) {
@@ -193,6 +195,7 @@ export function VisitsHub({
   initialTab,
   visits,
   invites,
+  propertyName,
 }: VisitsHubProps) {
   const router = useRouter();
   const [tab, setTab] = useState<VisitTab>(initialTab);
@@ -216,10 +219,18 @@ export function VisitsHub({
       requested: visits.filter((v) => v.status === 'requested').length,
       upcoming: approved.filter((v) => v.checkOut >= today).length,
       past: approved.filter((v) => v.checkOut < today).length,
-      cancelled: visits.filter(
-        (v) => v.status === 'cancelled' || v.status === 'declined'
-      ).length,
-      invited: invites.length,
+      // "Inactive" collects everything terminal: cancelled/declined visits plus
+      // expired/revoked invitations (invites that never became a visit).
+      cancelled:
+        visits.filter(
+          (v) => v.status === 'cancelled' || v.status === 'declined'
+        ).length +
+        invites.filter(
+          (i) => i.status === 'expired' || i.status === 'revoked'
+        ).length,
+      // Only invitations the guest hasn't acted on yet. Accepted invites become
+      // visits (shown in the other tabs).
+      invited: invites.filter((i) => i.status === 'pending').length,
     };
   }, [visits, invites, today]);
 
@@ -250,11 +261,17 @@ export function VisitsHub({
     return list.filter((v) => matchesQuery(query, v.guestName, v.email));
   }, [tab, visits, today, query]);
 
-  const visibleInvites = useMemo(
-    () =>
-      invites.filter((i) => matchesQuery(query, i.guestName, i.email)),
-    [invites, query]
-  );
+  const visibleInvites = useMemo(() => {
+    const forTab = (i: InviteItem) => {
+      if (tab === 'invited') return i.status === 'pending';
+      if (tab === 'cancelled')
+        return i.status === 'expired' || i.status === 'revoked';
+      return false;
+    };
+    return invites.filter(
+      (i) => forTab(i) && matchesQuery(query, i.guestName, i.email)
+    );
+  }, [tab, invites, query]);
 
   function selectTab(next: VisitTab) {
     setTab(next);
@@ -301,27 +318,12 @@ export function VisitsHub({
     router.refresh();
   }
 
-  async function revokeInvite(invitationId: string) {
-    const res = await fetch('/api/invitations', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invitation_id: invitationId, action: 'revoke' }),
-    });
-    if (!res.ok) {
-      toast.error('Failed to revoke');
-      return;
-    }
-    toast.success('Invitation revoked');
-    router.refresh();
-  }
-
-  const isEmpty =
-    tab === 'invited' ? visibleInvites.length === 0 : visibleVisits.length === 0;
+  const isEmpty = visibleVisits.length === 0 && visibleInvites.length === 0;
   const tabHasAny = counts[tab] > 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3">
           <div
             role="tablist"
             aria-label="Filter visits"
@@ -363,7 +365,7 @@ export function VisitsHub({
             })}
           </div>
 
-          <div className="relative sm:ml-auto sm:w-64">
+          <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
@@ -381,17 +383,6 @@ export function VisitsHub({
             tabHasAny={tabHasAny}
             label={TAB_LABEL[tab].toLowerCase()}
           />
-        ) : tab === 'invited' ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleInvites.map((inv) => (
-              <InviteCard
-                key={inv.id}
-                slug={slug}
-                invite={inv}
-                onRevoke={revokeInvite}
-              />
-            ))}
-          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleVisits.map((visit) => (
@@ -404,6 +395,13 @@ export function VisitsHub({
                 onApprove={() => handleAction(visit.id, 'approve')}
                 onDecline={() => setDeclineId(visit.id)}
                 onCancel={() => handleAction(visit.id, 'cancel')}
+              />
+            ))}
+            {visibleInvites.map((inv) => (
+              <InviteCard
+                key={inv.id}
+                invite={inv}
+                propertyName={propertyName}
               />
             ))}
           </div>
@@ -487,10 +485,12 @@ function ShareLinkButton({
   token,
   guestName,
   propertyName,
+  className,
 }: {
   token: string;
   guestName?: string | null;
   propertyName?: string | null;
+  className?: string;
 }) {
   async function share() {
     const url = getInviteUrl(token);
@@ -515,9 +515,13 @@ function ShareLinkButton({
     }
   }
   return (
-    <Button onClick={share} size="sm" className="h-9 flex-1 shadow-sm">
+    <Button
+      onClick={share}
+      size="sm"
+      className={cn('h-9 w-full shadow-sm', className)}
+    >
       <Share2 />
-      Share visit link
+      Share via link
     </Button>
   );
 }
@@ -535,6 +539,7 @@ function CardShell({
   bare = false,
   children,
   actionBar,
+  actionBarTransparent = false,
   bottomBleed,
   footer,
 }: {
@@ -557,6 +562,12 @@ function CardShell({
   children: React.ReactNode;
   /** Full-width action band (divider above the bottom strip). */
   actionBar?: React.ReactNode;
+  /**
+   * Let clicks in the action band's empty space (padding/gaps) fall through to
+   * the whole-card link. Interactive controls inside must opt back in with
+   * `pointer-events-auto`.
+   */
+  actionBarTransparent?: boolean;
   /** Edge-to-edge section pinned to the bottom of the card (no inner padding). */
   bottomBleed?: React.ReactNode;
   footer?: React.ReactNode;
@@ -627,7 +638,12 @@ function CardShell({
       </div>
 
       {actionBar && (
-        <div className="relative z-10 flex flex-wrap items-center gap-2 border-t px-4 py-3">
+        <div
+          className={cn(
+            'relative z-10 flex flex-wrap items-center gap-2 border-t px-4 py-3',
+            actionBarTransparent && 'pointer-events-none'
+          )}
+        >
           {actionBar}
         </div>
       )}
@@ -800,13 +816,11 @@ function VisitCard({
 }
 
 function InviteCard({
-  slug,
   invite,
-  onRevoke,
+  propertyName,
 }: {
-  slug: string;
   invite: InviteItem;
-  onRevoke: (id: string) => void;
+  propertyName?: string | null;
 }) {
   const badge = INVITE_STATUS_META[invite.status];
   const state = inviteStateMeta(invite.status);
@@ -814,48 +828,56 @@ function InviteCard({
   // in that case skip the possessive since the email shows right below.
   const hasName = invite.guestName !== invite.email;
   const firstName = invite.guestName.split(/\s+/)[0] || invite.guestName;
-  const href = guestProfileHref(slug, invite.email);
+  // Clicking the card opens the actual guest invite page (what the guest sees),
+  // not the host's internal profile view.
+  const href = getInviteUrl(invite.token);
+  // Sharing only makes sense while the invite is live; expired/revoked invites
+  // (shown in the Inactive tab) render read-only.
+  const isActionable = invite.status === 'pending';
+
+  const inviteLink = getInviteUrl(invite.token);
+  const greetingName = hasName ? firstName : 'there';
+  const shareBody = propertyName
+    ? `Hi ${greetingName}, you're invited to stay at ${propertyName}. View the details and pick your dates here: ${inviteLink}`
+    : `Hi ${greetingName}, you're invited. View the details and pick your dates here: ${inviteLink}`;
+  const smsHref = `sms:?&body=${encodeURIComponent(shareBody)}`;
+  const mailHref = `mailto:${encodeURIComponent(invite.email)}?subject=${encodeURIComponent(
+    propertyName ? `You're invited to stay at ${propertyName}` : `You're invited`
+  )}&body=${encodeURIComponent(shareBody)}`;
 
   const actions = (
-    <>
+    <div className="flex w-full flex-col gap-2">
       <ShareLinkButton
         token={invite.token}
         guestName={hasName ? invite.guestName : undefined}
+        propertyName={propertyName}
+        className="pointer-events-auto"
       />
-      {invite.status !== 'revoked' && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              aria-label="Cancel invitation"
-              title="Cancel invitation"
-            >
-              <X />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel this invitation?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {firstName}&apos;s invite link will stop working and they
-                won&apos;t be able to request a visit. This can&apos;t be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep invitation</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={() => onRevoke(invite.id)}
-              >
-                Cancel invitation
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-9 pointer-events-auto"
+        >
+          <a href={mailHref}>
+            <Mail />
+            Share via email
+          </a>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-9 pointer-events-auto"
+        >
+          <a href={smsHref}>
+            <MessageSquareText />
+            Share via text
+          </a>
+        </Button>
+      </div>
+    </div>
   );
 
   return (
@@ -868,7 +890,8 @@ function InviteCard({
       href={href}
       cardLabel={`View ${firstName}'s invitation`}
       bare
-      actionBar={actions}
+      actionBar={isActionable ? actions : undefined}
+      actionBarTransparent
       bottomBleed={
         invite.windows.length > 0 ? (
           <DateBox

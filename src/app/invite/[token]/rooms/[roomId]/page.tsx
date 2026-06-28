@@ -1,12 +1,24 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { notFound } from 'next/navigation';
 import {
   getInvitationByToken,
+  inviteUrl,
   isInvitationActive,
 } from '@/lib/invitations';
-import { canManageProperty, getAuthUser } from '@/lib/auth';
-import { guestProfileHref } from '@/lib/guest-keys';
-import { getGuestVisitForInvitation } from '@/lib/visits';
+import {
+  canManageProperty,
+  getAuthUser,
+  getCurrentUser,
+  getOwnerProperties,
+} from '@/lib/auth';
+import { isSiteAdmin } from '@/lib/site-admin';
+import { DashboardTopNav } from '@/components/dashboard/top-nav';
+import {
+  getGuestVisitForInvitation,
+  getVisitForInvitation,
+} from '@/lib/visits';
+import { HostVisitSidebar } from '@/components/guest/host-visit-sidebar';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assignColors } from '@/lib/calendar-colors';
 import { summarizeBeds } from '@/lib/validations';
@@ -66,16 +78,31 @@ export default async function GuestRoomPage({
     !!authUser && authUser.email === invitation.guest_email;
   const property = invitation.property;
 
-  // Guest surface only — send hosts to their own view of this guest.
+  // A host viewing this room link gets their own view, with host controls.
   const isHost = authUser
     ? await canManageProperty(invitation.property_id, authUser.id)
     : false;
-  if (isHost) {
-    redirect(
-      invitation.guest_email
-        ? guestProfileHref(property.slug, invitation.guest_email)
-        : `/dashboard/${property.slug}/visits`
+
+  let hostNav: ReactNode = null;
+  if (isHost && authUser) {
+    const [hostProperties, currentUser] = await Promise.all([
+      getOwnerProperties(authUser.id),
+      getCurrentUser(),
+    ]);
+    const hostCurrentProperty = hostProperties.find(
+      (p) => p.id === invitation.property_id
     );
+    if (hostCurrentProperty) {
+      hostNav = (
+        <DashboardTopNav
+          properties={hostProperties}
+          currentProperty={hostCurrentProperty}
+          userEmail={authUser.email ?? undefined}
+          userId={authUser.id}
+          showAdminLink={currentUser ? isSiteAdmin(currentUser) : false}
+        />
+      );
+    }
   }
 
   const houseHref = `/invite/${invitation.token}`;
@@ -84,6 +111,7 @@ export default async function GuestRoomPage({
     isAuthenticated && authUser
       ? await getGuestVisitForInvitation(invitation.id, authUser.id)
       : null;
+  const hostVisit = isHost ? await getVisitForInvitation(invitation.id) : null;
 
   const isPrixFixe = invitation.type === 'prix_fixe';
   const fixedWindow = isPrixFixe ? invitation.windows[0] : undefined;
@@ -131,38 +159,74 @@ export default async function GuestRoomPage({
     .eq('room_id', roomId)
     .eq('is_blocked', true);
 
-  const showSidebar = active || !!existingVisit;
-  const isManageVisit = !!existingVisit;
-  const dock = isManageVisit
+  const showSidebar = isHost || active || !!existingVisit;
+  const isManageVisit = !isHost && !!existingVisit;
+  const dock = isHost
     ? {
-        ctaLabel: 'View visit',
-        idleTitle: 'Your visit',
+        ctaLabel: 'Share invitation',
+        idleTitle: 'Share invitation',
         idleSubtitle: property.name,
         trackDates: false,
       }
-    : !isAuthenticated
+    : isManageVisit
       ? {
-          ctaLabel: 'Sign in',
-          idleTitle: 'Sign in to request a visit',
-          idleSubtitle: 'Magic link to your invited email',
+          ctaLabel: 'View visit',
+          idleTitle: 'Your visit',
+          idleSubtitle: property.name,
           trackDates: false,
         }
-      : invitation.whole_home
+      : !isAuthenticated
         ? {
-            ctaLabel: 'Book home',
-            idleTitle: 'Booked as a whole home',
-            idleSubtitle: 'Reserve the entire place',
+            ctaLabel: 'Sign in',
+            idleTitle: 'Sign in to request a visit',
+            idleSubtitle: 'Magic link to your invited email',
             trackDates: false,
           }
-        : {
-            ctaLabel: guestVisitCtaLabel(invitation),
-            idleTitle: 'Add your dates',
-            idleSubtitle: isPrixFixe
-              ? 'Fixed-date visit'
-              : 'Choose when you’ll arrive',
-            trackDates: true,
-          };
-  const visitSidebar = (
+        : invitation.whole_home
+          ? {
+              ctaLabel: 'Book home',
+              idleTitle: 'Booked as a whole home',
+              idleSubtitle: 'Reserve the entire place',
+              trackDates: false,
+            }
+          : {
+              ctaLabel: guestVisitCtaLabel(invitation),
+              idleTitle: 'Add your dates',
+              idleSubtitle: isPrixFixe
+                ? 'Fixed-date visit'
+                : 'Choose when you’ll arrive',
+              trackDates: true,
+            };
+  const visitSidebar = isHost ? (
+    <HostVisitSidebar
+      slug={property.slug}
+      inviteUrl={inviteUrl(invitation.token)}
+      invitationId={invitation.id}
+      invitationStatus={invitation.status}
+      propertyName={property.name}
+      guestName={
+        [invitation.guest_first_name, invitation.guest_last_name]
+          .filter(Boolean)
+          .join(' ') || null
+      }
+      guestEmail={invitation.guest_email}
+      windows={invitation.windows.map((w) => ({
+        start: w.start_date,
+        end: w.end_date,
+      }))}
+      roomNames={invitation.rooms.map((r) => r.name)}
+      visit={
+        hostVisit
+          ? {
+              id: hostVisit.id,
+              status: hostVisit.status,
+              checkIn: hostVisit.checkIn,
+              checkOut: hostVisit.checkOut,
+            }
+          : null
+      }
+    />
+  ) : (
     <VisitSidebar
       invitation={invitation}
       propertyName={property.name}
@@ -190,6 +254,7 @@ export default async function GuestRoomPage({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {hostNav}
       {/* Breadcrumb */}
       <div className="border-b">
         <RoomBreadcrumb

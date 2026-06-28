@@ -15,11 +15,14 @@ export function PropertySections({
   property,
   noteCategories,
   showWifi = false,
+  audience = 'guest',
 }: {
   property: Property;
   noteCategories?: PropertyNoteCategory[];
   /** WiFi and other access details — only after a visit is approved. */
   showWifi?: boolean;
+  /** Flips guest-addressed copy ("staying") to host copy ("hosting"). */
+  audience?: 'guest' | 'host';
 }) {
   const notes = property.property_notes ?? [];
 
@@ -41,7 +44,9 @@ export function PropertySections({
         <section className="py-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-semibold tracking-tight">
-              Where you&apos;re staying
+              {audience === 'host'
+                ? "Where you're hosting"
+                : "Where you're staying"}
             </h2>
             <DirectionsDialog
               address={property.address}
@@ -75,7 +80,9 @@ export function PropertySections({
       {property.amenities && property.amenities.length > 0 && (
         <section className="py-10">
           <h2 className="text-2xl font-semibold tracking-tight">
-            What this place offers
+            {audience === 'host'
+              ? 'What your place offers'
+              : 'What this place offers'}
           </h2>
           <ul className="mt-8 grid gap-x-12 gap-y-5 sm:grid-cols-2">
             {property.amenities.map((a) => (

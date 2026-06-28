@@ -24,8 +24,6 @@ import { InviteGuestDialog } from '@/components/dashboard/invite-guest-dialog';
 import { Button } from '@/components/ui/button';
 import { UpgradeDialog } from '@/components/dashboard/upgrade-dialog';
 import { isLimitReachedResponse } from '@/lib/billing-client';
-import { guestProfileHref } from '@/lib/guest-keys';
-
 type ComposeVariant = 'page' | 'embedded' | 'split';
 
 type HostComposeParts = {
@@ -202,11 +200,7 @@ function HostComposeForm({
       toast.success('Invitation sent!');
     }
     if (data.invitation?.token) {
-      router.push(
-        `${guestProfileHref(slug, guestEmail.trim())}?created=${data.invitation.token}`
-      );
-    } else {
-      router.push(guestProfileHref(slug, guestEmail.trim()));
+      router.push(`/invite/${data.invitation.token}`);
     }
     router.refresh();
   }

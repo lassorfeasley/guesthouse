@@ -215,6 +215,7 @@ export default async function VisitsPage({
         initialTab={initialTab}
         visits={visits}
         invites={invites}
+        propertyName={property.name}
       />
     </DashboardContainer>
   );
