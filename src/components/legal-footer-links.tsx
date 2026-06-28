@@ -5,7 +5,7 @@ export function LegalFooterLinks() {
   return (
     <nav
       aria-label="Legal"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground"
+      className="flex flex-col gap-1 text-sm text-muted-foreground"
     >
       <Link
         href={SITE_DOCUMENT_PATHS.terms}

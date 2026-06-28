@@ -157,7 +157,6 @@ export default async function VisitsPage({
     { includeGuestNames: true }
   );
 
-  const requestedCount = visits.filter((v) => v.status === 'requested').length;
   const initialTab: VisitTab = VALID_TABS.includes(status as VisitTab)
     ? (status as VisitTab)
     : 'all';
@@ -190,11 +189,6 @@ export default async function VisitsPage({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Visits</h1>
-          <p className="mt-1 text-muted-foreground">
-            {requestedCount > 0
-              ? `${requestedCount} request${requestedCount === 1 ? '' : 's'} waiting — approve and see who's coming to ${property.name}.`
-              : `See who's coming to ${property.name}.`}
-          </p>
         </div>
         <ComposePageActions
           propertyId={property.id}

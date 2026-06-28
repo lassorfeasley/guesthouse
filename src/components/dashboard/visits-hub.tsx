@@ -19,6 +19,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -99,9 +106,9 @@ const TAB_ORDER: VisitTab[] = [
   'cancelled',
 ];
 const TAB_LABEL: Record<VisitTab, string> = {
-  all: 'All',
+  all: 'All visits',
   invited: 'Awaiting reply',
-  requested: 'Dates requested',
+  requested: 'Needs your approval',
   upcoming: 'Scheduled',
   past: 'Past visits',
   cancelled: 'Inactive',
@@ -111,6 +118,21 @@ function matchesQuery(query: string, ...fields: (string | null | undefined)[]) {
   if (!query) return true;
   const q = query.trim().toLowerCase();
   return fields.some((f) => f?.toLowerCase().includes(q));
+}
+
+/**
+ * Whether a date span [start, end] (ISO yyyy-mm-dd) overlaps the filter range
+ * [from, to]. Either bound may be empty, meaning "open-ended" on that side.
+ */
+function overlapsDateRange(
+  from: string,
+  to: string,
+  start: string,
+  end: string
+) {
+  if (from && end < from) return false;
+  if (to && start > to) return false;
+  return true;
 }
 
 type StatusMeta = {
@@ -200,6 +222,8 @@ export function VisitsHub({
   const router = useRouter();
   const [tab, setTab] = useState<VisitTab>(initialTab);
   const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Approve / decline state is held here so request cards work in any tab
   // (e.g. "All" as well as "Requested").
@@ -258,8 +282,14 @@ export function VisitsHub({
       default:
         list = [];
     }
-    return list.filter((v) => matchesQuery(query, v.guestName, v.email));
-  }, [tab, visits, today, query]);
+    const hasDateFilter = !!dateFrom || !!dateTo;
+    return list.filter(
+      (v) =>
+        matchesQuery(query, v.guestName, v.email) &&
+        (!hasDateFilter ||
+          overlapsDateRange(dateFrom, dateTo, v.checkIn, v.checkOut))
+    );
+  }, [tab, visits, today, query, dateFrom, dateTo]);
 
   const visibleInvites = useMemo(() => {
     const forTab = (i: InviteItem) => {
@@ -268,14 +298,23 @@ export function VisitsHub({
         return i.status === 'expired' || i.status === 'revoked';
       return false;
     };
+    const hasDateFilter = !!dateFrom || !!dateTo;
     return invites.filter(
-      (i) => forTab(i) && matchesQuery(query, i.guestName, i.email)
+      (i) =>
+        forTab(i) &&
+        matchesQuery(query, i.guestName, i.email) &&
+        (!hasDateFilter ||
+          i.windows.some((w) =>
+            overlapsDateRange(dateFrom, dateTo, w.start, w.end)
+          ))
     );
-  }, [tab, invites, query]);
+  }, [tab, invites, query, dateFrom, dateTo]);
 
   function selectTab(next: VisitTab) {
     setTab(next);
     setQuery('');
+    setDateFrom('');
+    setDateTo('');
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.set('status', next);
@@ -323,49 +362,44 @@ export function VisitsHub({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3">
-          <div
-            role="tablist"
-            aria-label="Filter visits"
-            className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1"
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <Select
+            value={tab}
+            onValueChange={(value) => selectTab(value as VisitTab)}
           >
-            {TAB_ORDER.map((t) => {
-              const active = tab === t;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => selectTab(t)}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {TAB_LABEL[t]}
-                  {counts[t] > 0 && (
+            <SelectTrigger
+              className="h-9 w-full sm:w-[min(100%,14rem)]"
+              aria-label="Filter visits"
+            >
+              <SelectValue>
+                {TAB_LABEL[tab]}
+                {counts[tab] > 0 ? ` · ${counts[tab]}` : ''}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {TAB_ORDER.map((t) => (
+                <SelectItem key={t} value={t} className="pr-8">
+                  <span className="flex w-full items-center justify-between gap-3">
+                    <span>{TAB_LABEL[t]}</span>
                     <span
                       className={cn(
                         'rounded-full px-1.5 text-xs tabular-nums',
-                        active
+                        counts[t] > 0
                           ? t === 'requested'
                             ? 'bg-warning/20 text-warning-foreground'
                             : 'bg-muted text-foreground'
-                          : 'bg-muted text-muted-foreground'
+                          : 'text-muted-foreground'
                       )}
                     >
                       {counts[t]}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="relative w-full sm:max-w-xs">
+          <div className="relative w-full min-w-0 flex-1 sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
@@ -375,6 +409,59 @@ export function VisitsHub({
               className="pl-9"
               aria-label="Search visits"
             />
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="visits-date-from"
+                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                From
+              </label>
+              <Input
+                id="visits-date-from"
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 w-[8.5rem]"
+                aria-label="Filter from date"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="visits-date-to"
+                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                To
+              </label>
+              <Input
+                id="visits-date-to"
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 w-[8.5rem]"
+                aria-label="Filter to date"
+              />
+            </div>
+            {(query || dateFrom || dateTo) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 text-muted-foreground"
+                onClick={() => {
+                  setQuery('');
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
           </div>
         </div>
 
